@@ -2,13 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-
-const examples = [
-  { title: "Capdepera", artist: "Herví Tille", tone: "ochre", mark: "01" },
-  { title: "Posidònia", artist: "Blanca", tone: "blue", mark: "02" },
-  { title: "Sa Roqueta", artist: "Blanca", tone: "coral", mark: "03" },
-  { title: "Mediterrani", artist: "Colectivo", tone: "green", mark: "04" },
-];
+import { products } from "../data/products";
 
 export default function ParallaxGallery() {
   const root = useRef<HTMLElement>(null);
@@ -33,11 +27,11 @@ export default function ParallaxGallery() {
     <section ref={root} className="parallax-stage" aria-labelledby="gallery-title">
       <div className="edge edge-left" aria-hidden="true"><span className="doodle palm">♠</span><span className="doodle lemon">●</span><span className="doodle waves">≋</span><span className="doodle flower">✽</span></div>
       <div className="scroll-sheet">
-        <div className="gallery-heading"><p className="eyebrow">Una primera mirada</p><h2 id="gallery-title">Diseños de la isla</h2><p>Cuatro espacios de muestra. Después, cada obra llegará directamente desde el CMS.</p></div>
+        <div className="gallery-heading"><p className="eyebrow">Una primera mirada</p><h2 id="gallery-title">Diseños de la isla</h2><p>Fine Art Prints creados, seleccionados e impresos en Mallorca.</p></div>
         <div className="poster-stream">
-          {examples.map((item, index) => <article className={`stream-item stream-${index + 1}`} key={item.title}><div className={`poster ${item.tone}`}><span className="work-no">{item.mark}</span><div className="work-shape" /><p>ILLES BALEARS<br />MEDITERRANI</p></div><div className="stream-caption"><h3>{item.title}</h3><p>{item.artist}</p></div></article>)}
+          {products.map((item, index) => <Link className={`stream-item stream-${index + 1}`} href={`/shop/${item.slug}`} key={item.slug}><div className="stream-image"><img src={item.image} alt={`${item.title} — ${item.artist}`} /></div><div className="stream-caption"><h3>{item.title}</h3><p>{item.artist}</p></div></Link>)}
         </div>
-        <Link className="shop-link" href="/shop">Ver los 80 diseños <span>→</span></Link>
+        <Link className="shop-link" href="/shop">Ver la colección <span>→</span></Link>
       </div>
       <div className="edge edge-right" aria-hidden="true"><span className="doodle sunlet">☼</span><span className="doodle boat">⌁</span><span className="doodle olive">❧</span><span className="doodle star">☆</span></div>
     </section>
