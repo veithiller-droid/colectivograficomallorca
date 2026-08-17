@@ -9,9 +9,10 @@ const formats = Object.keys(formatPrices) as PrintFormat[];
 
 export default function ProductView({ product }: { product: Product }) {
   const [format, setFormat] = useState<PrintFormat>("A6");
+  const [activeImage, setActiveImage] = useState(product.image);
   const { t } = useLanguage();
   return <section className="product-detail shell">
-    <div className="product-visual"><img src={product.image} alt={`${product.title} — ${product.artist}`} /></div>
+    <div className="product-gallery"><div className="product-visual"><img src={activeImage} alt={`${product.title} — ${product.artist}`} /></div>{product.gallery.length > 1 && <div className="product-thumbnails" aria-label="Produktansichten">{product.gallery.map((image, index) => <button type="button" className={activeImage === image ? "active" : ""} onClick={() => setActiveImage(image)} key={image} aria-label={`Ansicht ${index + 1}`}><img src={image} alt="" /></button>)}</div>}</div>
     <div className="product-info">
       <p className="eyebrow">{t.product.eyebrow}</p><h1>{product.title}</h1><p className="product-artist">{product.artist}</p>
       <p className="product-price">{formatPrices[format].toFixed(2).replace(".", ",")} €</p>

@@ -10,7 +10,7 @@ export const translations = {
       cta: "Kollektion entdecken",
       galleryEyebrow: "Eine erste Auswahl", galleryTitle: "Designs von der Insel", galleryText: "Fine Art Prints – gestaltet, ausgewählt und gedruckt auf Mallorca.", galleryLink: "Kollektion ansehen",
       whoEyebrow: "Wer wir sind", whoTitle: "Mallorca aus der Sicht der Menschen, die hier Kunst schaffen.",
-      whoText: "Colectivo Gráfico Mallorca ist eine lokale Plattform für Kunst, Illustration und grafisches Design aus Mallorca. Unsere Künstler sind Blanca Colina, Herví Tille und Sandra Engler.", whoLink: "Mehr über uns",
+      whoText: "Colectivo Gráfico Mallorca ist eine lokale Plattform für Kunst, Illustration und grafisches Design aus Mallorca. Unsere Künstler sind Blanca Colina, Herví Tille, Sandra Engler und Miquel Salat.", whoLink: "Mehr über uns",
       whatEyebrow: "Was wir tun", whatTitle: "Von der Idee zum Print.",
       whatText1: "Wir wählen Kunstwerke, Illustrationen und grafische Entwürfe aus und produzieren daraus hochwertige Druckeditionen.",
       whatText2: "Die Arbeiten sind als Print, gerahmt oder ungerahmt, mit individueller Rahmung und bei ausgewählten Motiven als digitaler Download erhältlich.",
@@ -22,7 +22,7 @@ export const translations = {
         "Colectivo Gráfico Mallorca ist eine unabhängige Verkaufs- und Präsentationsplattform für Kunst, Illustration und grafisches Design aus Mallorca.",
         "Mallorca ist mehr als ein Postkartenmotiv. Die Insel ist ein Lebensraum voller Kontraste: Kalkstein und Meer, intensive Farben und ausgebleichte Fassaden, ländliche Stille und mediterrane Lebendigkeit. Diese Vielfalt bildet den gemeinsamen Bezug unserer Arbeiten.",
         "Wir arbeiten mit Künstlern zusammen, die auf Mallorca geboren wurden oder die Insel zu ihrer Heimat gemacht haben. Unterschiedliche Herkunft, unterschiedliche Stilrichtungen und unterschiedliche Arten, Mallorca zu sehen.",
-        "Unsere Künstler sind Blanca Colina, Herví Tille und Sandra Engler. Ausführliche Künstlerporträts und Lebensläufe werden später ergänzt.",
+        "Unsere Künstler sind Blanca Colina, Herví Tille, Sandra Engler und Miquel Salat. Ausführliche Künstlerporträts und Lebensläufe werden später ergänzt.",
         "Dabei entsteht keine einheitliche Darstellung der Insel. Die Kollektion zeigt persönliche, zeitgenössische Perspektiven auf Landschaft, Architektur, Farben, Alltag und mediterranes Leben – jenseits der üblichen touristischen Bilder."
       ],
       artistsTitle: "Unsere Künstler", artistPlaceholder: "Künstlerporträt folgt"
@@ -51,7 +51,7 @@ export const translations = {
       cta: "Descubrir la colección",
       galleryEyebrow: "Una primera selección", galleryTitle: "Diseños de la isla", galleryText: "Fine Art Prints creados, seleccionados e impresos en Mallorca.", galleryLink: "Ver la colección",
       whoEyebrow: "Quiénes somos", whoTitle: "Mallorca vista por quienes crean arte en la isla.",
-      whoText: "Colectivo Gráfico Mallorca es una plataforma local de arte, ilustración y diseño gráfico de Mallorca. Nuestros artistas son Blanca Colina, Herví Tille y Sandra Engler.", whoLink: "Conocer el proyecto",
+      whoText: "Colectivo Gráfico Mallorca es una plataforma local de arte, ilustración y diseño gráfico de Mallorca. Nuestros artistas son Blanca Colina, Herví Tille, Sandra Engler y Miquel Salat.", whoLink: "Conocer el proyecto",
       whatEyebrow: "Qué hacemos", whatTitle: "De la idea al papel.",
       whatText1: "Seleccionamos obras, ilustraciones y diseños gráficos para convertirlos en ediciones impresas de alta calidad.",
       whatText2: "Las obras están disponibles impresas, con o sin marco, con enmarcación personalizada y, en diseños seleccionados, como descarga digital.",
@@ -63,7 +63,7 @@ export const translations = {
         "Colectivo Gráfico Mallorca es una plataforma independiente para la presentación y venta de arte, ilustración y diseño gráfico de Mallorca.",
         "Mallorca es mucho más que una imagen de postal. Es un territorio de contrastes: piedra caliza y mar, colores intensos y fachadas desgastadas, silencio rural y vitalidad mediterránea. Esta diversidad es el punto de unión de nuestras obras.",
         "Trabajamos con artistas nacidos en Mallorca o que han hecho de la isla su hogar. Diferentes orígenes, estilos y maneras de observar Mallorca.",
-        "Nuestros artistas son Blanca Colina, Herví Tille y Sandra Engler. Los retratos y las biografías completas se añadirán más adelante.",
+        "Nuestros artistas son Blanca Colina, Herví Tille, Sandra Engler y Miquel Salat. Los retratos y las biografías completas se añadirán más adelante.",
         "No buscamos una imagen uniforme de la isla. La colección reúne perspectivas personales y contemporáneas sobre el paisaje, la arquitectura, los colores, la vida cotidiana y el Mediterráneo, más allá de las imágenes turísticas habituales."
       ],
       artistsTitle: "Nuestros artistas", artistPlaceholder: "Retrato del artista próximamente"

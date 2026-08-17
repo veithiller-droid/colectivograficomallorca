@@ -3,7 +3,7 @@
 import SiteHeader from "../components/site-header";
 import { useLanguage } from "../components/language-provider";
 
-const artists = ["Blanca Colina", "Herví Tille", "Sandra Engler"];
+const artists = ["Blanca Colina", "Herví Tille", "Sandra Engler", "Miquel Salat"];
 
 export default function WhoWeAre() {
   const { t } = useLanguage();
