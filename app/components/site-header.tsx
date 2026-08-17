@@ -1,5 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "./language-provider";
 
 export default function SiteHeader() {
-  return <header className="nav shell"><Link className="brand" href="/" aria-label="Colectivo Gráfico Mallorca – Inicio"><span>COLECTIVO</span><span>GRÁFICO</span><span>MALLORCA</span></Link><nav aria-label="Navegación principal"><Link href="/shop">Obra</Link><Link href="/#colectivo">El colectivo</Link><Link href="/#que-hacemos">Qué hacemos</Link><Link href="/#newsletter">Newsletter</Link><button className="bag" aria-label="Abrir cesta">Bolsa <b>0</b></button></nav></header>;
+  const { language, setLanguage, t } = useLanguage();
+  return <header className="nav shell">
+    <Link className="brand" href="/" aria-label="Colectivo Gráfico Mallorca"><span>COLECTIVO</span><span>GRÁFICO</span><span>MALLORCA</span></Link>
+    <nav aria-label="Navigation"><Link href="/shop">SHOP</Link><Link href="/who-we-are">{t.nav.who}</Link><Link href="/what-we-do">{t.nav.what}</Link><Link href="/#newsletter">{t.nav.newsletter}</Link><div className="language-switch" aria-label="Sprache wählen"><button className={language === "de" ? "active" : ""} onClick={() => setLanguage("de")}>DE</button><span>/</span><button className={language === "es" ? "active" : ""} onClick={() => setLanguage("es")}>ES</button></div><button className="bag" aria-label={t.nav.bag}>{t.nav.bag} <b>0</b></button></nav>
+  </header>;
 }
