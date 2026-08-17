@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 
 const examples = [
   { title: "Capdepera", artist: "Herví Tille", tone: "ochre", mark: "01" },
@@ -36,7 +37,7 @@ export default function ParallaxGallery() {
         <div className="poster-stream">
           {examples.map((item, index) => <article className={`stream-item stream-${index + 1}`} key={item.title}><div className={`poster ${item.tone}`}><span className="work-no">{item.mark}</span><div className="work-shape" /><p>ILLES BALEARS<br />MEDITERRANI</p></div><div className="stream-caption"><h3>{item.title}</h3><p>{item.artist}</p></div></article>)}
         </div>
-        <a className="shop-link" href="/shop">Ver los 80 diseños <span>→</span></a>
+        <Link className="shop-link" href="/shop">Ver los 80 diseños <span>→</span></Link>
       </div>
       <div className="edge edge-right" aria-hidden="true"><span className="doodle sunlet">☼</span><span className="doodle boat">⌁</span><span className="doodle olive">❧</span><span className="doodle star">☆</span></div>
     </section>
