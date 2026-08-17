@@ -1,0 +1,2 @@
+import SiteHeader from "../components/site-header";
+export default function WhoWeAre(){return <main><SiteHeader/><section className="text-page shell"><p className="eyebrow">Who we are</p><h1>La isla vista por quienes la crean.</h1><p>Colectivo Gráfico Mallorca reúne artistas mallorquines y artistas que han hecho de la isla su hogar. Diferentes trayectorias, estilos y formas de mirar Mallorca.</p></section></main>}
