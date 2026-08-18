@@ -3,7 +3,6 @@ export type PrintFormat = keyof typeof formatPrices;
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const asset = (name: string) => `${basePath}/images/products/${name}`;
-const room = (number: number, name: string) => asset(`room${String(number).padStart(3, "0")}-${name}.webp`);
 
 export type Product = {
   id: string;
@@ -15,55 +14,66 @@ export type Product = {
   placeholder?: boolean;
 };
 
-const placeholder = (id: string, artist: string, roomImage?: string): Product => ({
+const product = (
+  id: string,
+  slug: string,
+  title: string,
+  artist: string,
+  roomImage?: string,
+): Product => {
+  const image = asset(`${id}.webp`);
+  return { id, slug, title, artist, image, gallery: roomImage ? [image, asset(roomImage)] : [image] };
+};
+
+const placeholder = (id: string, artist: string): Product => ({
   id,
   slug: id,
   title: `Motiv ${id.toUpperCase().replace("CGM-", "")}`,
   artist,
   image: null,
-  gallery: roomImage ? [null, roomImage] : [null],
+  gallery: [null],
   placeholder: true,
 });
 
 export const artistOrder = ["Blanca Colina", "Herví Tille", "Sandra Engler", "Miquel Salat"] as const;
 
 export const products: readonly Product[] = [
-  { id: "cgm-bc001", slug: "cena-en-arta", title: "Cena en Artà", artist: "Blanca Colina", image: asset("blanca-colina-cena-en-arta.webp"), gallery: [asset("blanca-colina-cena-en-arta.webp")] },
-  { id: "cgm-bc002", slug: "por-la-tarde-en-arta", title: "Por la tarde en Artà", artist: "Blanca Colina", image: asset("blanca-colina-por-la-tarde-en-arta.webp"), gallery: [asset("blanca-colina-por-la-tarde-en-arta.webp")] },
-  { id: "cgm-bc003", slug: "mercat-arta", title: "Mercat d’Artà", artist: "Blanca Colina", image: asset("blanca-colina-mercat-arta-001.webp"), gallery: [asset("blanca-colina-mercat-arta-001.webp"), asset("blanca-colina-mercat-arta-room-001.webp")] },
-  placeholder("cgm-bc004", "Blanca Colina"),
+  product("cgm-bc001", "mercat-arta", "Mercat d’Artà", "Blanca Colina", "cgm-bc001-room007-a2.webp"),
+  product("cgm-bc002", "higos-en-arta", "Higos en Artà", "Blanca Colina"),
+  product("cgm-bc003", "cena-en-arta", "Cena en Artà", "Blanca Colina", "cgm-bc003-room001-a2.webp"),
+  product("cgm-bc004", "por-la-tarde-en-arta", "Por la tarde en Artà", "Blanca Colina", "cgm-bc004-room006-a3.webp"),
   placeholder("cgm-bc005", "Blanca Colina"),
-  placeholder("cgm-bc006", "Blanca Colina", room(2, "finca")),
+  placeholder("cgm-bc006", "Blanca Colina"),
   placeholder("cgm-bc007", "Blanca Colina"),
   placeholder("cgm-bc008", "Blanca Colina"),
 
-  { id: "cgm-ht001", slug: "taronges", title: "Taronges", artist: "Herví Tille", image: asset("hervi-tille-taronges-001.webp"), gallery: [asset("hervi-tille-taronges-001.webp"), room(3, "modern")] },
-  { id: "cgm-ht002", slug: "palma", title: "Palma", artist: "Herví Tille", image: asset("hervi-tille-palma-001.webp"), gallery: [asset("hervi-tille-palma-001.webp")] },
-  { id: "cgm-ht003", slug: "colonia-de-sant-pere", title: "Colònia de Sant Pere", artist: "Herví Tille", image: asset("hervi-tille-colonia-de-sant-pere.webp"), gallery: [asset("hervi-tille-colonia-de-sant-pere.webp")] },
-  { id: "cgm-ht004", slug: "mallorca-cycling", title: "Mallorca Cycling", artist: "Herví Tille", image: asset("hervi-tille-mallorca-cycling.webp"), gallery: [asset("hervi-tille-mallorca-cycling.webp"), room(4, "eclectic")] },
+  product("cgm-ht001", "mallorca-arta", "Mallorca · Artà", "Herví Tille", "cgm-ht001-room003-a2.webp"),
+  product("cgm-ht002", "mallorca-colonia-de-sant-pere", "Mallorca · Colònia de Sant Pere", "Herví Tille", "cgm-ht002-room005-a2.webp"),
+  product("cgm-ht003", "mallorca-capdepera", "Mallorca · Capdepera", "Herví Tille"),
+  placeholder("cgm-ht004", "Herví Tille"),
   placeholder("cgm-ht005", "Herví Tille"),
   placeholder("cgm-ht006", "Herví Tille"),
-  placeholder("cgm-ht007", "Herví Tille", room(5, "hallway")),
+  placeholder("cgm-ht007", "Herví Tille"),
   placeholder("cgm-ht008", "Herví Tille"),
 
   placeholder("cgm-se001", "Sandra Engler"),
-  placeholder("cgm-se002", "Sandra Engler", room(6, "desk")),
+  placeholder("cgm-se002", "Sandra Engler"),
   placeholder("cgm-se003", "Sandra Engler"),
   placeholder("cgm-se004", "Sandra Engler"),
-  placeholder("cgm-se005", "Sandra Engler", room(7, "kitchen")),
+  placeholder("cgm-se005", "Sandra Engler"),
   placeholder("cgm-se006", "Sandra Engler"),
-  placeholder("cgm-se007", "Sandra Engler"),
 
-  { id: "cgm-ms001", slug: "sardines-on-tour-bus", title: "Sardines on Tour · Bus", artist: "Miquel Salat", image: asset("miquel-salat-sardines-on-tour-bus-001.webp"), gallery: [asset("miquel-salat-sardines-on-tour-bus-001.webp"), room(1, "scandinavian")] },
-  { id: "cgm-ms002", slug: "sardines-on-tour-boat", title: "Sardines on Tour · Boat", artist: "Miquel Salat", image: asset("miquel-salat-sardines-on-tour-boat-001.webp"), gallery: [asset("miquel-salat-sardines-on-tour-boat-001.webp")] },
-  placeholder("cgm-ms003", "Miquel Salat"),
-  placeholder("cgm-ms004", "Miquel Salat", room(2, "finca")),
-  placeholder("cgm-ms005", "Miquel Salat"),
-  placeholder("cgm-ms006", "Miquel Salat"),
-  placeholder("cgm-ms007", "Miquel Salat", room(3, "modern")),
+  product("cgm-ms001", "sardines-on-tour-bus", "Sardines on Tour · Bus", "Miquel Salat"),
+  product("cgm-ms002", "sardines-on-tour-plane", "Sardines on Tour · Plane", "Miquel Salat", "cgm-ms002-room006-a4.webp"),
+  product("cgm-ms003", "sardines-on-tour-car", "Sardines on Tour · Car", "Miquel Salat"),
+  product("cgm-ms004", "sardines-on-tour-boat", "Sardines on Tour · Boat", "Miquel Salat"),
+  product("cgm-ms005", "sardines-on-tour-tram", "Sardines on Tour · Tram", "Miquel Salat"),
+  product("cgm-ms006", "sardines-on-tour-vespa", "Sardines on Tour · Vespa", "Miquel Salat"),
+  product("cgm-ms007", "sardines-on-tour-balloon", "Sardines on Tour · Balloon", "Miquel Salat"),
+  product("cgm-ms008", "sardines-on-tour-tin", "Sardines on Tour · Tin", "Miquel Salat"),
 ];
 
 export const productsByArtist = artistOrder.map(artist => ({
   artist,
-  products: products.filter(product => product.artist === artist),
+  products: products.filter(productItem => productItem.artist === artist),
 }));
