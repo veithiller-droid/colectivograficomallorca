@@ -32,7 +32,7 @@ export default function ParallaxGallery() {
 
   return (
     <section ref={root} className="parallax-stage" aria-labelledby="gallery-title">
-      <div className="edge edge-left" aria-hidden="true"><span className="doodle palm">♠</span><span className="doodle lemon">●</span><span className="doodle waves">≋</span><span className="doodle flower">✽</span></div>
+      <div className="edge edge-left" aria-hidden="true" />
       <div className="scroll-sheet">
         <div className="gallery-heading"><p className="eyebrow">{t.home.galleryEyebrow}</p><h2 id="gallery-title">{t.home.galleryTitle}</h2><p>{t.home.galleryText}</p></div>
         <div className="poster-stream">
@@ -40,7 +40,7 @@ export default function ParallaxGallery() {
         </div>
         <Link className="shop-link" href="/shop">{t.home.galleryLink} <span>→</span></Link>
       </div>
-      <div className="edge edge-right" aria-hidden="true"><span className="doodle sunlet">☼</span><span className="doodle boat">⌁</span><span className="doodle olive">❧</span><span className="doodle star">☆</span></div>
+      <div className="edge edge-right" aria-hidden="true" />
     </section>
   );
 }
