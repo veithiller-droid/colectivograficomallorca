@@ -3,7 +3,12 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { products } from "../data/products";
+import type { Product } from "../data/products";
 import { useLanguage } from "./language-provider";
+
+const featuredProducts = products.filter(
+  (item): item is Product & { image: string } => item.image !== null,
+);
 
 export default function ParallaxGallery() {
   const { t } = useLanguage();
@@ -31,7 +36,7 @@ export default function ParallaxGallery() {
       <div className="scroll-sheet">
         <div className="gallery-heading"><p className="eyebrow">{t.home.galleryEyebrow}</p><h2 id="gallery-title">{t.home.galleryTitle}</h2><p>{t.home.galleryText}</p></div>
         <div className="poster-stream">
-          {products.map((item, index) => <Link className={`stream-item stream-${index + 1}`} href={`/shop/${item.slug}`} key={item.slug}><div className="stream-image"><img src={item.image} alt={`${item.title} — ${item.artist}`} /></div><div className="stream-caption"><h3>{item.title}</h3><p>{item.artist}</p></div></Link>)}
+          {featuredProducts.map((item, index) => <Link className={`stream-item stream-${index + 1}`} href={`/shop/${item.slug}`} key={item.slug}><div className="stream-image"><img src={item.image} alt={`${item.title} — ${item.artist}`} /></div><div className="stream-caption"><h3>{item.title}</h3><p>{item.artist}</p></div></Link>)}
         </div>
         <Link className="shop-link" href="/shop">{t.home.galleryLink} <span>→</span></Link>
       </div>
