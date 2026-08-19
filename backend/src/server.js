@@ -19,6 +19,10 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       await query(`UPDATE orders SET status='paid',stripe_payment_intent_id=$1,customer_email=$2,total_cents=$3,updated_at=NOW() WHERE stripe_checkout_session_id=$4`, [session.payment_intent, session.customer_details?.email || null, session.amount_total || 0, session.id]);
+    } else if (event.type === "payment_intent.succeeded") {
+      const intent = event.data.object;
+      const paymentMethod = intent.payment_method ? await stripe.paymentMethods.retrieve(intent.payment_method) : null;
+      await query(`UPDATE orders SET status='paid',customer_email=$1,total_cents=$2,updated_at=NOW() WHERE stripe_payment_intent_id=$3`, [intent.receipt_email || paymentMethod?.billing_details?.email || null, intent.amount_received || intent.amount, intent.id]);
     }
     response.json({ received: true });
   } catch (error) { response.status(400).send(`Webhook error: ${error.message}`); }
@@ -80,7 +84,7 @@ app.post("/api/public/newsletter", async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
-app.post("/api/public/checkout", async (request, response, next) => {
+app.post("/api/public/payment-intent", async (request, response, next) => {
   if (!stripe) return response.status(503).json({ error: "Stripe is not configured" });
   try {
     const requestedItems = Array.isArray(request.body?.items) ? request.body.items.slice(0, 50) : [];
@@ -103,12 +107,11 @@ app.post("/api/public/checkout", async (request, response, next) => {
       verified.push({ type: "product", productId: row.id, title: row.title, format: row.format, frameId, quantity, unitPriceCents: Number(row.price_cents) + Number(row.surcharge_cents) });
     }
     const orderId = crypto.randomUUID();
-    const storefront = process.env.STOREFRONT_ORIGIN || "http://localhost:5173";
-    const session = await stripe.checkout.sessions.create({ mode: "payment", locale, billing_address_collection: "required", shipping_address_collection: { allowed_countries: ["ES", "DE", "FR", "AT", "BE", "NL", "IT", "PT"] }, success_url: `${storefront}/cart?success=1&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${storefront}/cart?cancelled=1`, metadata: { orderId }, line_items: verified.map(item => ({ quantity: item.quantity, price_data: { currency: "eur", unit_amount: item.unitPriceCents, product_data: { name: item.title, description: item.type === "surprise" ? (locale === "es" ? "Cinco postales A6 diferentes" : "Fünf unterschiedliche A6-Postkarten") : `${item.format} · ${item.frameId}` } } })) });
     const total = verified.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0);
-    await query(`INSERT INTO orders(id,stripe_checkout_session_id,status,currency,total_cents) VALUES($1,$2,'pending','eur',$3)`, [orderId, session.id, total]);
+    const intent = await stripe.paymentIntents.create({ amount: total, currency: "eur", automatic_payment_methods: { enabled: true }, metadata: { orderId } });
+    await query(`INSERT INTO orders(id,stripe_payment_intent_id,status,currency,total_cents) VALUES($1,$2,'pending','eur',$3)`, [orderId, intent.id, total]);
     for (const item of verified) await query(`INSERT INTO order_items(order_id,product_id,product_title,format,frame_id,quantity,unit_price_cents) VALUES($1,$2,$3,$4,$5,$6,$7)`, [orderId, item.productId, item.title, item.format, item.frameId, item.quantity, item.unitPriceCents]);
-    response.status(201).json({ url: session.url });
+    response.status(201).json({ clientSecret: intent.client_secret, orderId });
   } catch (error) { next(error); }
 });
 
