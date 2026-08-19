@@ -2,14 +2,27 @@ import crypto from "node:crypto";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import Stripe from "stripe";
 import { initializeDatabase } from "./init-db.js";
 import { pool, query } from "./db.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3001);
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const origins = [process.env.STOREFRONT_ORIGIN, process.env.CMS_ORIGIN].filter(Boolean);
 app.use(helmet());
 app.use(cors({ origin: origins.length ? origins : false }));
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (request, response) => {
+  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return response.status(503).send("Stripe is not configured");
+  try {
+    const event = stripe.webhooks.constructEvent(request.body, request.headers["stripe-signature"], process.env.STRIPE_WEBHOOK_SECRET);
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      await query(`UPDATE orders SET status='paid',stripe_payment_intent_id=$1,customer_email=$2,total_cents=$3,updated_at=NOW() WHERE stripe_checkout_session_id=$4`, [session.payment_intent, session.customer_details?.email || null, session.amount_total || 0, session.id]);
+    }
+    response.json({ received: true });
+  } catch (error) { response.status(400).send(`Webhook error: ${error.message}`); }
+});
 app.use(express.json({ limit: "100kb" }));
 
 app.get("/health", async (_request, response) => {
@@ -64,6 +77,38 @@ app.post("/api/public/newsletter", async (request, response, next) => {
       ON CONFLICT(email) DO UPDATE SET locale=EXCLUDED.locale,status='pending',consent_at=NOW(),unsubscribed_at=NULL`,
       [email, locale]);
     response.status(202).json({ accepted: true });
+  } catch (error) { next(error); }
+});
+
+app.post("/api/public/checkout", async (request, response, next) => {
+  if (!stripe) return response.status(503).json({ error: "Stripe is not configured" });
+  try {
+    const requestedItems = Array.isArray(request.body?.items) ? request.body.items.slice(0, 50) : [];
+    if (!requestedItems.length) return response.status(400).json({ error: "Cart is empty" });
+    const locale = request.body?.locale === "es" ? "es" : "de";
+    const verified = [];
+    for (const item of requestedItems) {
+      const quantity = Math.max(1, Math.min(20, Number(item.quantity) || 1));
+      if (item.type === "surprise") {
+        verified.push({ type: "surprise", title: locale === "es" ? "5 postales sorpresa" : "5 Surprise-Postkarten", quantity, unitPriceCents: 1000, format: "A6", frameId: null, productId: null });
+        continue;
+      }
+      const frameId = String(item.frameId || "unframed");
+      if (!["unframed", "standard-black", "aluminium-silver", "aluminium-black", "aluminium-gold"].includes(frameId)) return response.status(400).json({ error: "Frame option is not available for checkout" });
+      const result = await query(`SELECT p.id,p.title,p.active,pf.format,pf.price_cents,pf.available,COALESCE(fp.surcharge_cents,0) AS surcharge_cents FROM products p JOIN product_formats pf ON pf.product_id=p.id LEFT JOIN frame_prices fp ON fp.frame_id=$3 AND fp.format=pf.format WHERE p.id=$1 AND pf.format=$2`, [item.productId, item.format, frameId]);
+      const row = result.rows[0];
+      if (!row?.active || !row.available) return response.status(400).json({ error: "Product format is unavailable" });
+      if (row.format === "A6" && frameId !== "unframed") return response.status(400).json({ error: "A6 is only available unframed" });
+      if (frameId !== "unframed" && !Number(row.surcharge_cents)) return response.status(400).json({ error: "Frame format is unavailable" });
+      verified.push({ type: "product", productId: row.id, title: row.title, format: row.format, frameId, quantity, unitPriceCents: Number(row.price_cents) + Number(row.surcharge_cents) });
+    }
+    const orderId = crypto.randomUUID();
+    const storefront = process.env.STOREFRONT_ORIGIN || "http://localhost:5173";
+    const session = await stripe.checkout.sessions.create({ mode: "payment", locale, billing_address_collection: "required", shipping_address_collection: { allowed_countries: ["ES", "DE", "FR", "AT", "BE", "NL", "IT", "PT"] }, success_url: `${storefront}/cart?success=1&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${storefront}/cart?cancelled=1`, metadata: { orderId }, line_items: verified.map(item => ({ quantity: item.quantity, price_data: { currency: "eur", unit_amount: item.unitPriceCents, product_data: { name: item.title, description: item.type === "surprise" ? (locale === "es" ? "Cinco postales A6 diferentes" : "Fünf unterschiedliche A6-Postkarten") : `${item.format} · ${item.frameId}` } } })) });
+    const total = verified.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0);
+    await query(`INSERT INTO orders(id,stripe_checkout_session_id,status,currency,total_cents) VALUES($1,$2,'pending','eur',$3)`, [orderId, session.id, total]);
+    for (const item of verified) await query(`INSERT INTO order_items(order_id,product_id,product_title,format,frame_id,quantity,unit_price_cents) VALUES($1,$2,$3,$4,$5,$6,$7)`, [orderId, item.productId, item.title, item.format, item.frameId, item.quantity, item.unitPriceCents]);
+    response.status(201).json({ url: session.url });
   } catch (error) { next(error); }
 });
 

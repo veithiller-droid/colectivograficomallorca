@@ -53,3 +53,4 @@ CREATE TABLE IF NOT EXISTS import_runs (
 );
 CREATE INDEX IF NOT EXISTS products_artist_idx ON products(artist_id,sort_order);
 CREATE INDEX IF NOT EXISTS product_images_product_idx ON product_images(product_id,sort_order);
+ALTER TABLE order_items ALTER COLUMN product_id DROP NOT NULL;

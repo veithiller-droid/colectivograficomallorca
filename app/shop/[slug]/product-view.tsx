@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Product, PrintFormat } from "../../data/products";
 import { formatPrices } from "../../data/products";
 import { useLanguage } from "../../components/language-provider";
+import { useCart, type CartFrame } from "../../components/cart-provider";
 
 type FrameType = "unframed" | "standard" | "aluminium" | "custom";
 type FrameColor = "silver" | "black" | "gold";
@@ -31,6 +32,8 @@ export default function ProductView({ product, previousProduct, nextProduct }: P
   const [artistTransition, setArtistTransition] = useState<string | null>(null);
   const touchStartX = useRef<number | null>(null);
   const { t } = useLanguage();
+  const { addItem } = useCart();
+  const [added, setAdded] = useState(false);
 
   useEffect(() => {
     const artist = window.sessionStorage.getItem(artistTransitionKey);
@@ -75,6 +78,13 @@ export default function ProductView({ product, previousProduct, nextProduct }: P
     setFormat(nextFormat);
     if (nextFormat === "A6") setFrame("unframed");
   };
+  const addToCart = () => {
+    if (!format || totalPrice === null || frame === "custom") return;
+    const frameId: CartFrame = frame === "aluminium" ? `aluminium-${frameColor}` : frame === "standard" ? "standard-black" : "unframed";
+    addItem({ type: "product", productId: product.id, slug: product.slug, title: product.title, artist: product.artist, image: product.image, format, frameId, unitPrice: totalPrice });
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1800);
+  };
   return <>
     <button type="button" className="product-page-arrow product-page-arrow-left" onClick={() => navigateTo(previousProduct)} aria-label={`Previous: ${previousProduct.title}`}><span aria-hidden="true">&#8249;</span></button>
     <button type="button" className="product-page-arrow product-page-arrow-right" onClick={() => navigateTo(nextProduct)} aria-label={`Next: ${nextProduct.title}`}><span aria-hidden="true">&#8250;</span></button>
@@ -96,7 +106,7 @@ export default function ProductView({ product, previousProduct, nextProduct }: P
       {format === "A6" && <p className="frame-availability">{t.product.a6Unframed}</p>}
       {frame === "aluminium" && <fieldset className="option-picker color-picker"><legend>{t.product.frameColor}</legend><div className="color-options">{(["silver", "black", "gold"] as FrameColor[]).map(color => <button type="button" className={frameColor === color ? "active" : ""} onClick={() => setFrameColor(color)} key={color}><span className={`color-dot ${color}`} />{t.product.colors[color]}</button>)}</div><p>{t.product.realGlass}</p></fieldset>}
       {frame === "custom" && <p className="custom-frame-note">{t.product.customInfo}</p>}
-      <button className="add-to-cart" type="button" disabled={!format}>{frame === "custom" ? t.product.request : t.product.cart}</button>
+      <button className="add-to-cart" type="button" disabled={!format} onClick={addToCart}>{frame === "custom" ? t.product.request : added ? (t.product.cart === "In den Warenkorb" ? "Hinzugefügt" : "Añadido") : t.product.cart}</button>
       <div className="technical-info"><h2>{t.product.technical}</h2><dl><div><dt>{t.product.product}</dt><dd>Fine Art Print</dd></div><div><dt>{t.product.artist}</dt><dd>{product.artist}</dd></div><div><dt>{t.product.format}</dt><dd>{format ?? "–"}</dd></div><div><dt>{t.product.frame}</dt><dd>{frame === "aluminium" ? `${t.product.aluminiumFrame} · ${t.product.colors[frameColor]} · ${t.product.realGlass}` : t.product.frameValues[frame]}</dd></div><div><dt>{t.product.origin}</dt><dd>Made, selected and printed in Mallorca</dd></div><div><dt>{t.product.shipping}</dt><dd>{t.product.shippingValue}</dd></div></dl></div>
     </div>
     </section>

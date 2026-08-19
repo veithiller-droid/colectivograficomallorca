@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { LanguageProvider } from "./components/language-provider";
-import SiteFooter from "./components/site-footer";
+import { CartProvider } from "./components/cart-provider";
 
 export const metadata: Metadata = {
   title: "Colectivo Gráfico Mallorca",
@@ -20,5 +20,5 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <html lang="de"><body><LanguageProvider>{children}<SiteFooter/></LanguageProvider></body></html>;
+  return <html lang="de"><body><LanguageProvider><CartProvider>{children}</CartProvider></LanguageProvider></body></html>;
 }
