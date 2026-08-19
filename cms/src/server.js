@@ -59,6 +59,14 @@ app.get("/api/products", requireLogin, async (_request, response) => {
   const result = await backend("/api/cms/products");
   response.status(result.status).send(await result.text());
 });
+app.get("/api/homepage", requireLogin, async (_request, response) => {
+  const result = await backend("/api/cms/homepage");
+  response.status(result.status).send(await result.text());
+});
+app.patch("/api/homepage", requireLogin, async (request, response) => {
+  const result = await backend("/api/cms/homepage", { method:"PATCH", body:JSON.stringify(request.body) });
+  response.status(result.status).send(await result.text());
+});
 app.post("/api/products", requireLogin, async (request, response) => {
   const result = await backend("/api/cms/products", { method: "POST", body: JSON.stringify(request.body) });
   response.status(result.status).send(await result.text());
@@ -96,6 +104,8 @@ app.get("/", (request, response) => response.sendFile(path.join(root, authentica
 app.get("/index.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "index.html")) : response.redirect("/"));
 app.get("/products", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "products.html")) : response.redirect("/"));
 app.get("/products.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "products.html")) : response.redirect("/"));
+app.get("/homepage", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "homepage.html")) : response.redirect("/"));
+app.get("/homepage.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "homepage.html")) : response.redirect("/"));
 app.use(express.static(root, { index: false }));
 
 app.listen(port, () => console.log(`CMS listening on ${port}`));

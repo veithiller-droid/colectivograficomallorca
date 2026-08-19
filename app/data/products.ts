@@ -85,6 +85,23 @@ type ApiProduct = {
 };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://creative-perfection-production-3c6e.up.railway.app";
+const publicImage = (path: string) => path.startsWith("/api/public/images/") ? `${apiUrl}${path}` : `${basePath}${path}`;
+
+export type HomepageImage = { id: string; path: string; slug: string; title: string; artist: string; imageType: "primary" | "room" };
+export type HomepageContent = { heroMode: "graphic" | "fixed" | "random"; hero: HomepageImage | null; selection: readonly HomepageImage[] };
+
+const mapHomepageImage = (item: { id:number|string; path:string; slug:string; title:string; artist:string; image_type:string }): HomepageImage => ({ id:String(item.id), path:publicImage(item.path), slug:item.slug, title:item.title, artist:item.artist, imageType:item.image_type === "room" ? "room" : "primary" });
+
+export async function fetchHomepage(): Promise<HomepageContent> {
+  try {
+    const response = await fetch(`${apiUrl}/api/public/homepage`, { cache:"no-store" });
+    if (!response.ok) throw new Error(`Homepage API returned ${response.status}`);
+    const data = await response.json();
+    return { heroMode:data.heroMode || "graphic", hero:data.hero ? mapHomepageImage(data.hero) : null, selection:(data.selection || []).map(mapHomepageImage).slice(0,4) };
+  } catch {
+    return { heroMode:"graphic", hero:null, selection:[] };
+  }
+}
 
 export async function fetchProducts(): Promise<readonly Product[]> {
   try {
@@ -93,7 +110,7 @@ export async function fetchProducts(): Promise<readonly Product[]> {
     const payload = await response.json() as { products?: ApiProduct[] };
     if (!payload.products?.length) throw new Error("Product API returned no products");
     return payload.products.map(item => {
-      const images = item.images.map(image => image.path.startsWith("/api/public/images/") ? `${apiUrl}${image.path}` : `${basePath}${image.path}`);
+      const images = item.images.map(image => publicImage(image.path));
       const primary = item.images.findIndex(image => image.type === "primary");
       const gallery = primary > 0 ? [images[primary], ...images.filter((_, index) => index !== primary)] : images;
       return {
@@ -119,7 +136,7 @@ export async function fetchNewProducts(): Promise<readonly Product[]> {
     if (!response.ok) return [];
     const payload = await response.json() as { products?: ApiProduct[] };
     return (payload.products || []).map(item => {
-      const images = item.images.map(image => image.path.startsWith("/api/public/images/") ? `${apiUrl}${image.path}` : `${basePath}${image.path}`);
+      const images = item.images.map(image => publicImage(image.path));
       const primary = item.images.findIndex(image => image.type === "primary");
       const gallery = primary > 0 ? [images[primary], ...images.filter((_, index) => index !== primary)] : images;
       return { id:item.id, slug:item.slug, title:item.title, artist:item.artist.name, image:gallery[0] ?? null, gallery:gallery.length ? gallery : [null], availableFormats:item.formats.filter(format => format.available && format.format in formatPrices).map(format => format.format as PrintFormat), featured:Boolean(item.featured) };

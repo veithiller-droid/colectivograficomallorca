@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { products } from "../data/products";
+import { fetchHomepage, products } from "../data/products";
 import type { Product } from "../data/products";
 import { useLanguage } from "./language-provider";
 
-const featuredProducts = products.filter(
+const fallbackProducts = products.filter(
   (item): item is Product & { image: string } => item.image !== null,
-);
+).slice(0,4);
 
 export default function ParallaxGallery() {
   const { t } = useLanguage();
   const root = useRef<HTMLElement>(null);
+  const [selection, setSelection] = useState<Awaited<ReturnType<typeof fetchHomepage>>["selection"]>([]);
+  useEffect(() => { fetchHomepage().then(content => setSelection(content.selection)); }, []);
   useEffect(() => {
     const section = root.current;
     if (!section) return;
@@ -36,7 +38,7 @@ export default function ParallaxGallery() {
       <div className="scroll-sheet">
         <div className="gallery-heading"><p className="eyebrow">{t.home.galleryEyebrow}</p><h2 id="gallery-title">{t.home.galleryTitle}</h2><p>{t.home.galleryText}</p></div>
         <div className="poster-stream">
-          {featuredProducts.map((item, index) => <Link className={`stream-item stream-${index + 1}`} href={`/shop/${item.slug}`} key={item.slug}><div className="stream-image"><img src={item.image} alt={`${item.title} — ${item.artist}`} /></div><div className="stream-caption"><h3>{item.title}</h3><p>{item.artist}</p></div></Link>)}
+          {(selection.length ? selection.map(item => ({ ...item, image:item.path })) : fallbackProducts).map((item, index) => <Link className={`stream-item stream-${index + 1}`} href={`/shop/${item.slug}`} key={`${item.slug}-${"id" in item ? item.id : index}`}><div className="stream-image"><img src={item.image!} alt={`${item.title} — ${item.artist}`} /></div><div className="stream-caption"><h3>{item.title}</h3><p>{item.artist}</p></div></Link>)}
         </div>
         <Link className="shop-link" href="/shop">{t.home.galleryLink} <span>→</span></Link>
       </div>

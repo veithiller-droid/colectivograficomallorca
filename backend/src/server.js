@@ -100,6 +100,21 @@ app.get("/api/public/images/:id", async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
+app.get("/api/public/homepage", async (_request, response, next) => {
+  try {
+    const settings = (await query("SELECT hero_mode,hero_image_id,selection_image_ids FROM homepage_settings WHERE id=TRUE")).rows[0] || { hero_mode:"random", selection_image_ids:[] };
+    let hero = null;
+    if (settings.hero_mode === "fixed" && settings.hero_image_id) {
+      hero = (await query(`SELECT i.id,i.path,i.image_type,p.slug,p.title,a.name AS artist FROM product_images i JOIN products p ON p.id=i.product_id JOIN artists a ON a.id=p.artist_id WHERE i.id=$1 AND p.active=TRUE`, [settings.hero_image_id])).rows[0] || null;
+    } else if (settings.hero_mode === "random") {
+      hero = (await query(`SELECT i.id,i.path,i.image_type,p.slug,p.title,a.name AS artist FROM product_images i JOIN products p ON p.id=i.product_id JOIN artists a ON a.id=p.artist_id WHERE p.active=TRUE ORDER BY RANDOM() LIMIT 1`)).rows[0] || null;
+    }
+    const selection = (await query(`SELECT i.id,i.path,i.image_type,p.slug,p.title,a.name AS artist FROM jsonb_array_elements_text($1::jsonb) WITH ORDINALITY chosen(id,position) JOIN product_images i ON i.id=chosen.id::bigint JOIN products p ON p.id=i.product_id JOIN artists a ON a.id=p.artist_id WHERE p.active=TRUE ORDER BY chosen.position LIMIT 4`, [JSON.stringify(settings.selection_image_ids || [])])).rows;
+    response.set("Cache-Control", "no-store");
+    response.json({ heroMode:settings.hero_mode, hero, selection });
+  } catch (error) { next(error); }
+});
+
 app.get("/api/public/products/:slug", async (request, response, next) => {
   try {
     const result = await query(`${productQuery} WHERE p.slug=$1 AND p.active=TRUE`, [request.params.slug]);
@@ -176,6 +191,26 @@ app.get("/api/cms/products", requireCms, async (_request, response, next) => {
   try {
     const result = await query(`${productQuery} ORDER BY a.sort_order,p.sort_order,p.title`);
     response.json({ products: result.rows });
+  } catch (error) { next(error); }
+});
+
+app.get("/api/cms/homepage", requireCms, async (_request, response, next) => {
+  try {
+    const settings = (await query("SELECT hero_mode,hero_image_id,selection_image_ids FROM homepage_settings WHERE id=TRUE")).rows[0];
+    const images = (await query(`SELECT i.id,i.image_type,i.path,i.room_code,i.shown_format,p.id AS product_id,p.slug,p.title,a.name AS artist FROM product_images i JOIN products p ON p.id=i.product_id JOIN artists a ON a.id=p.artist_id WHERE p.active=TRUE ORDER BY a.sort_order,p.sort_order,i.sort_order`)).rows;
+    response.json({ settings, images });
+  } catch (error) { next(error); }
+});
+
+app.patch("/api/cms/homepage", requireCms, async (request, response, next) => {
+  try {
+    const heroMode = ["graphic","fixed","random"].includes(request.body?.heroMode) ? request.body.heroMode : "graphic";
+    const heroImageId = heroMode === "fixed" && request.body?.heroImageId ? Number(request.body.heroImageId) : null;
+    const selectionImageIds = [...new Set((Array.isArray(request.body?.selectionImageIds) ? request.body.selectionImageIds : []).map(Number).filter(Number.isSafeInteger))].slice(0,4);
+    const validIds = (await query("SELECT id FROM product_images WHERE id=ANY($1::bigint[])", [selectionImageIds])).rows.map(row => Number(row.id));
+    if (heroImageId && !(await query("SELECT 1 FROM product_images WHERE id=$1", [heroImageId])).rowCount) return response.status(400).json({ error:"Invalid hero image" });
+    await query("UPDATE homepage_settings SET hero_mode=$1,hero_image_id=$2,selection_image_ids=$3::jsonb,updated_at=NOW() WHERE id=TRUE", [heroMode, heroImageId, JSON.stringify(selectionImageIds.filter(id => validIds.includes(id)))]);
+    response.json({ saved:true });
   } catch (error) { next(error); }
 });
 

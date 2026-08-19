@@ -18,6 +18,19 @@ ALTER TABLE product_images ADD COLUMN IF NOT EXISTS image_data BYTEA;
 ALTER TABLE product_images ADD COLUMN IF NOT EXISTS mime_type TEXT;
 ALTER TABLE product_images ADD COLUMN IF NOT EXISTS original_name TEXT;
 ALTER TABLE product_images ADD COLUMN IF NOT EXISTS uploaded_at TIMESTAMPTZ;
+CREATE TABLE IF NOT EXISTS homepage_settings (
+  id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+  hero_mode TEXT NOT NULL DEFAULT 'random' CHECK (hero_mode IN ('graphic','fixed','random')),
+  hero_image_id BIGINT REFERENCES product_images(id) ON DELETE SET NULL,
+  selection_image_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+  random_header_migrated BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO homepage_settings(id) VALUES(TRUE) ON CONFLICT(id) DO NOTHING;
+ALTER TABLE homepage_settings ADD COLUMN IF NOT EXISTS random_header_migrated BOOLEAN NOT NULL DEFAULT FALSE;
+UPDATE homepage_settings
+SET hero_mode='random', random_header_migrated=TRUE, updated_at=NOW()
+WHERE random_header_migrated=FALSE;
 CREATE TABLE IF NOT EXISTS product_formats (
   product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   format TEXT NOT NULL CHECK (format IN ('A6','A4','A3','A2')),

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import ParallaxGallery from "./components/parallax-gallery";
 import NewArrivals from "./components/new-arrivals";
+import HeroArt from "./components/hero-art";
 import SiteHeader from "./components/site-header";
 import { useLanguage } from "./components/language-provider";
 
@@ -10,7 +11,7 @@ export default function Home() {
   const { t } = useLanguage();
   return <main>
     <SiteHeader />
-    <section id="top" className="hero shell"><div className="hero-copy"><p className="eyebrow">{t.home.eyebrow}</p><h1>{t.home.title1}<br/><i>{t.home.title2}</i></h1><p className="intro">{t.home.intro}</p><a className="cta" href="#obra">{t.home.cta} <span>↘</span></a></div><div className="hero-art" aria-label="Mediterrane grafische Komposition"><div className="sun"/><div className="arch"/><div className="sea"/><div className="leaf leaf-one"/><div className="leaf leaf-two"/><span className="edition">Edición<br/>01—26</span></div></section>
+    <section id="top" className="hero shell"><div className="hero-copy"><p className="eyebrow">{t.home.eyebrow}</p><h1>{t.home.title1}<br/><i>{t.home.title2}</i></h1><p className="intro">{t.home.intro}</p><a className="cta" href="#obra">{t.home.cta} <span>↘</span></a></div><HeroArt /></section>
     <div id="obra"><ParallaxGallery /></div>
     <NewArrivals />
     <section id="colectivo" className="manifesto shell"><p className="eyebrow">{t.home.whoEyebrow}</p><p className="statement">{t.home.whoTitle}</p><div className="manifesto-foot"><p>{t.home.whoText}</p><Link href="/who-we-are">{t.home.whoLink} →</Link></div></section>
