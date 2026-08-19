@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Product, PrintFormat } from "../../data/products";
-import { formatPrices } from "../../data/products";
+import { fetchProducts, formatPrices } from "../../data/products";
 import { useLanguage } from "../../components/language-provider";
 import { useCart, type CartFrame } from "../../components/cart-provider";
 
@@ -16,6 +16,7 @@ const frameSurcharges: Record<Exclude<FrameType, "unframed">, Partial<Record<Pri
 };
 
 type ProductViewProps = {
+  requestedSlug: string;
   product: Product;
   previousProduct: Product;
   nextProduct: Product;
@@ -23,7 +24,7 @@ type ProductViewProps = {
 
 const artistTransitionKey = "cgm-artist-transition";
 
-export default function ProductView({ product, previousProduct, nextProduct }: ProductViewProps) {
+function ProductViewContent({ product, previousProduct, nextProduct }: Omit<ProductViewProps, "requestedSlug">) {
   const router = useRouter();
   const [format, setFormat] = useState<PrintFormat | null>(null);
   const [frame, setFrame] = useState<FrameType>("unframed");
@@ -111,4 +112,22 @@ export default function ProductView({ product, previousProduct, nextProduct }: P
     </div>
     </section>
   </>;
+}
+
+export default function ProductView({ requestedSlug, product: initialProduct, previousProduct: initialPrevious, nextProduct: initialNext }: ProductViewProps) {
+  const [catalog, setCatalog] = useState<readonly Product[] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchProducts().then(items => { if (active) setCatalog(items); });
+    return () => { active = false; };
+  }, []);
+
+  const navigableProducts = (catalog ?? []).filter(item => item.image !== null);
+  const resolvedProduct = navigableProducts.find(item => item.slug === requestedSlug) ?? initialProduct;
+  const resolvedIndex = navigableProducts.findIndex(item => item.slug === resolvedProduct.slug);
+  const previousProduct = resolvedIndex >= 0 ? navigableProducts[(resolvedIndex - 1 + navigableProducts.length) % navigableProducts.length] : initialPrevious;
+  const nextProduct = resolvedIndex >= 0 ? navigableProducts[(resolvedIndex + 1) % navigableProducts.length] : initialNext;
+
+  return <ProductViewContent key={`${resolvedProduct.slug}-${resolvedProduct.image ?? "placeholder"}`} product={resolvedProduct} previousProduct={previousProduct} nextProduct={nextProduct} />;
 }

@@ -12,5 +12,5 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const safeIndex = currentIndex >= 0 ? currentIndex : 0;
   const previousProduct = navigableProducts[(safeIndex - 1 + navigableProducts.length) % navigableProducts.length];
   const nextProduct = navigableProducts[(safeIndex + 1) % navigableProducts.length];
-  return <main><SiteHeader /><ProductView key={product.slug} product={product} previousProduct={previousProduct} nextProduct={nextProduct} /></main>;
+  return <main><SiteHeader /><ProductView requestedSlug={slug} product={product} previousProduct={previousProduct} nextProduct={nextProduct} /></main>;
 }

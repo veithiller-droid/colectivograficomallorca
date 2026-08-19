@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS product_images (
   image_type TEXT NOT NULL CHECK (image_type IN ('primary','room')), path TEXT NOT NULL,
   room_code TEXT, shown_format TEXT, sort_order INTEGER NOT NULL DEFAULT 0, UNIQUE(product_id,path)
 );
+ALTER TABLE product_images ADD COLUMN IF NOT EXISTS image_data BYTEA;
+ALTER TABLE product_images ADD COLUMN IF NOT EXISTS mime_type TEXT;
+ALTER TABLE product_images ADD COLUMN IF NOT EXISTS original_name TEXT;
+ALTER TABLE product_images ADD COLUMN IF NOT EXISTS uploaded_at TIMESTAMPTZ;
 CREATE TABLE IF NOT EXISTS product_formats (
   product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   format TEXT NOT NULL CHECK (format IN ('A6','A4','A3','A2')),

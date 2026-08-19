@@ -67,6 +67,30 @@ app.patch("/api/products/:id", requireLogin, async (request, response) => {
   const result = await backend(`/api/cms/products/${encodeURIComponent(request.params.id)}`, { method: "PATCH", body: JSON.stringify(request.body) });
   response.status(result.status).send(await result.text());
 });
+app.post("/api/products/:id/images", requireLogin, async (request, response) => {
+  const result = await fetch(`${backendUrl}/api/cms/products/${encodeURIComponent(request.params.id)}/images`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${process.env.CMS_API_TOKEN}`, "content-type": request.headers["content-type"] },
+    body: request,
+    duplex: "half",
+  });
+  response.status(result.status).send(await result.text());
+});
+app.patch("/api/products/:productId/images/:imageId", requireLogin, async (request, response) => {
+  const result = await backend(`/api/cms/products/${encodeURIComponent(request.params.productId)}/images/${encodeURIComponent(request.params.imageId)}`, { method: "PATCH", body: JSON.stringify(request.body) });
+  response.status(result.status).send(await result.text());
+});
+app.delete("/api/products/:productId/images/:imageId", requireLogin, async (request, response) => {
+  const result = await backend(`/api/cms/products/${encodeURIComponent(request.params.productId)}/images/${encodeURIComponent(request.params.imageId)}`, { method: "DELETE" });
+  response.status(result.status).send(await result.text());
+});
+app.get("/media/:id", requireLogin, async (request, response) => {
+  const result = await fetch(`${backendUrl}/api/public/images/${encodeURIComponent(request.params.id)}`);
+  if (!result.ok) return response.sendStatus(result.status);
+  response.set("Content-Type", result.headers.get("content-type") || "image/webp");
+  response.set("Cache-Control", "private, max-age=3600");
+  response.send(Buffer.from(await result.arrayBuffer()));
+});
 app.get("/session", (request, response) => response.json({ authenticated: authenticated(request) }));
 app.get("/", (request, response) => response.sendFile(path.join(root, authenticated(request) ? "index.html" : "login.html")));
 app.get("/index.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "index.html")) : response.redirect("/"));

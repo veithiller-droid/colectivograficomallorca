@@ -12,6 +12,7 @@ export type Product = {
   image: string | null;
   gallery: readonly (string | null)[];
   availableFormats: readonly PrintFormat[];
+  featured?: boolean;
   placeholder?: boolean;
 };
 
@@ -80,6 +81,7 @@ type ApiProduct = {
   artist: { name: string };
   images: readonly { type: string; path: string }[];
   formats: readonly { format: string; available: boolean }[];
+  featured?: boolean;
 };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://creative-perfection-production-3c6e.up.railway.app";
@@ -91,7 +93,7 @@ export async function fetchProducts(): Promise<readonly Product[]> {
     const payload = await response.json() as { products?: ApiProduct[] };
     if (!payload.products?.length) throw new Error("Product API returned no products");
     return payload.products.map(item => {
-      const images = item.images.map(image => `${basePath}${image.path}`);
+      const images = item.images.map(image => image.path.startsWith("/api/public/images/") ? `${apiUrl}${image.path}` : `${basePath}${image.path}`);
       const primary = item.images.findIndex(image => image.type === "primary");
       const gallery = primary > 0 ? [images[primary], ...images.filter((_, index) => index !== primary)] : images;
       return {
@@ -102,10 +104,25 @@ export async function fetchProducts(): Promise<readonly Product[]> {
         image: gallery[0] ?? null,
         gallery: gallery.length ? gallery : [null],
         availableFormats: item.formats.filter(format => format.available && format.format in formatPrices).map(format => format.format as PrintFormat),
+        featured: Boolean(item.featured),
       };
     });
   } catch (error) {
     console.warn("Using bundled product catalog because the API is unavailable.", error);
     return products;
   }
+}
+
+export async function fetchNewProducts(): Promise<readonly Product[]> {
+  try {
+    const response = await fetch(`${apiUrl}/api/public/products?featured=true`);
+    if (!response.ok) return [];
+    const payload = await response.json() as { products?: ApiProduct[] };
+    return (payload.products || []).map(item => {
+      const images = item.images.map(image => image.path.startsWith("/api/public/images/") ? `${apiUrl}${image.path}` : `${basePath}${image.path}`);
+      const primary = item.images.findIndex(image => image.type === "primary");
+      const gallery = primary > 0 ? [images[primary], ...images.filter((_, index) => index !== primary)] : images;
+      return { id:item.id, slug:item.slug, title:item.title, artist:item.artist.name, image:gallery[0] ?? null, gallery:gallery.length ? gallery : [null], availableFormats:item.formats.filter(format => format.available && format.format in formatPrices).map(format => format.format as PrintFormat), featured:Boolean(item.featured) };
+    }).filter(item => item.image !== null).slice(0, 8);
+  } catch { return []; }
 }
