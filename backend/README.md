@@ -1,19 +1,42 @@
-# Backend
+# Colectivo Gráfico Mallorca – Railway Backend v1
 
-Separate Railway-Anwendung für API, PostgreSQL, Stripe, Newsletter, Instagram
-und private Downloads.
+Eigenständige Node.js-API für Railway mit PostgreSQL.
 
-## Struktur
+## Enthalten
 
-- `src/config/` – Umgebungsvariablen
-- `src/db/` – Schema und Migrationen
-- `src/middleware/` – Anmeldung und Fehlerbehandlung
-- `src/routes/public/` – öffentliche API
-- `src/routes/admin/` – geschützte CMS-API
-- `src/routes/webhooks/` – Stripe-Webhooks
-- `src/services/` – Stripe, Newsletter, Instagram, Downloads
-- `src/jobs/` – Hintergrundaufgaben
-- `src/templates/` – E-Mail-Vorlagen
-- `tests/` – Backend-Tests
+- PostgreSQL-Schema für Künstler, Produkte, Bilder, Formate und Rahmen
+- 31 aktuelle Produkte als wiederholbarer Seed-Import
+- Newsletter- und Bestelltabellen
+- öffentliche Produkt-API und Healthcheck
+- CORS-Konfiguration für Storefront und CMS
 
-Private Download-Dateien werden nicht in Git gespeichert.
+## Lokal starten
+
+```bash
+cp .env.example .env
+npm install
+npm run db:init
+npm start
+```
+
+## Railway
+
+Root Directory: `/backend`
+
+```text
+NODE_ENV=production
+DATABASE_URL=<Reference auf PostgreSQL.DATABASE_URL>
+STOREFRONT_ORIGIN=https://deine-storefront-domain
+CMS_ORIGIN=https://deine-cms-domain
+```
+
+Beim Start werden Schema und Produktimport automatisch ausgeführt. Der Import
+arbeitet mit stabilen Produkt-IDs und kann beliebig oft wiederholt werden.
+
+## Endpunkte
+
+- `GET /health`
+- `GET /api/public/artists`
+- `GET /api/public/products`
+- `GET /api/public/products/:slug`
+- `POST /api/public/newsletter`
