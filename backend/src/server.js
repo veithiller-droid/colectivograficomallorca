@@ -65,7 +65,7 @@ app.get("/api/public/artists", async (_request, response, next) => {
   } catch (error) { next(error); }
 });
 
-const productQuery = `SELECT p.id,p.slug,p.title,p.description_de,p.description_es,
+const productQuery = `SELECT p.id,p.slug,p.title,p.description_de,p.description_es,p.active,p.featured,p.sort_order,
   json_build_object('id',a.id,'name',a.name) AS artist,
   COALESCE((SELECT json_agg(json_build_object('type',i.image_type,'path',i.path,'roomCode',i.room_code,'shownFormat',i.shown_format) ORDER BY i.sort_order)
     FROM product_images i WHERE i.product_id=p.id),'[]') AS images,
@@ -141,14 +141,70 @@ app.get("/api/cms/orders", requireCms, async (request, response, next) => {
   try {
     const status = request.query.status && fulfillmentStatuses.includes(String(request.query.status)) ? String(request.query.status) : null;
     const result = await query(`SELECT o.*,
-      COALESCE(json_agg(json_build_object('id',oi.id,'productId',oi.product_id,'title',oi.product_title,'format',oi.format,
+      COALESCE(json_agg(json_build_object('id',oi.id,'productId',oi.product_id,'title',oi.product_title,'artistName',a.name,'format',oi.format,
       'frameId',oi.frame_id,'quantity',oi.quantity,'unitPriceCents',oi.unit_price_cents) ORDER BY oi.id)
       FILTER (WHERE oi.id IS NOT NULL),'[]') AS items
-      FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id
+      FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id LEFT JOIN products p ON p.id=oi.product_id LEFT JOIN artists a ON a.id=p.artist_id
       WHERE o.status='paid' AND ($1::text IS NULL OR o.fulfillment_status=$1)
       GROUP BY o.id ORDER BY o.created_at DESC LIMIT 250`, [status]);
     response.json({ orders: result.rows });
   } catch (error) { next(error); }
+});
+
+app.get("/api/cms/artists", requireCms, async (_request, response, next) => {
+  try {
+    const result = await query("SELECT id,name,active,sort_order FROM artists ORDER BY sort_order,name");
+    response.json({ artists: result.rows });
+  } catch (error) { next(error); }
+});
+
+app.get("/api/cms/products", requireCms, async (_request, response, next) => {
+  try {
+    const result = await query(`${productQuery} ORDER BY a.sort_order,p.sort_order,p.title`);
+    response.json({ products: result.rows });
+  } catch (error) { next(error); }
+});
+
+app.post("/api/cms/products", requireCms, async (request, response, next) => {
+  const client = await pool.connect();
+  try {
+    const title = String(request.body?.title || "").trim();
+    const artistId = String(request.body?.artistId || "");
+    const slug = String(request.body?.slug || title).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100);
+    if (!title || !artistId || !slug) return response.status(400).json({ error: "Title and artist are required" });
+    const id = crypto.randomUUID();
+    await client.query("BEGIN");
+    const sort = await client.query("SELECT COALESCE(MAX(sort_order),0)+1 AS value FROM products WHERE artist_id=$1", [artistId]);
+    await client.query(`INSERT INTO products(id,slug,artist_id,title,description_de,description_es,active,featured,sort_order)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [id, slug, artistId, title, String(request.body.descriptionDe || ""), String(request.body.descriptionEs || ""), Boolean(request.body.active), Boolean(request.body.featured), sort.rows[0].value]);
+    for (const format of ["A6","A4","A3","A2"]) {
+      const entry = request.body.formats?.find(item => item.format === format);
+      await client.query("INSERT INTO product_formats(product_id,format,price_cents,available) VALUES($1,$2,$3,$4)", [id, format, Math.max(0, Number(entry?.priceCents) || 0), Boolean(entry?.available)]);
+    }
+    await client.query("COMMIT");
+    response.status(201).json({ id, slug });
+  } catch (error) { await client.query("ROLLBACK"); next(error); } finally { client.release(); }
+});
+
+app.patch("/api/cms/products/:id", requireCms, async (request, response, next) => {
+  const client = await pool.connect();
+  try {
+    const title = String(request.body?.title || "").trim();
+    const artistId = String(request.body?.artistId || "");
+    if (!title || !artistId) return response.status(400).json({ error: "Title and artist are required" });
+    await client.query("BEGIN");
+    const result = await client.query(`UPDATE products SET title=$1,artist_id=$2,description_de=$3,description_es=$4,active=$5,featured=$6,updated_at=NOW() WHERE id=$7 RETURNING id`,
+      [title, artistId, String(request.body.descriptionDe || ""), String(request.body.descriptionEs || ""), Boolean(request.body.active), Boolean(request.body.featured), request.params.id]);
+    if (!result.rowCount) { await client.query("ROLLBACK"); return response.status(404).json({ error: "Product not found" }); }
+    for (const entry of Array.isArray(request.body.formats) ? request.body.formats : []) {
+      if (!["A6","A4","A3","A2"].includes(entry.format)) continue;
+      await client.query(`INSERT INTO product_formats(product_id,format,price_cents,available) VALUES($1,$2,$3,$4)
+        ON CONFLICT(product_id,format) DO UPDATE SET price_cents=EXCLUDED.price_cents,available=EXCLUDED.available`,
+        [request.params.id, entry.format, Math.max(0, Number(entry.priceCents) || 0), Boolean(entry.available)]);
+    }
+    await client.query("COMMIT");
+    response.json({ saved: true });
+  } catch (error) { await client.query("ROLLBACK"); next(error); } finally { client.release(); }
 });
 
 app.patch("/api/cms/orders/:id", requireCms, async (request, response, next) => {
