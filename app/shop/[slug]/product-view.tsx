@@ -6,7 +6,6 @@ import type { Product, PrintFormat } from "../../data/products";
 import { formatPrices } from "../../data/products";
 import { useLanguage } from "../../components/language-provider";
 
-const formats = Object.keys(formatPrices) as PrintFormat[];
 type FrameType = "unframed" | "standard" | "aluminium" | "custom";
 type FrameColor = "silver" | "black" | "gold";
 const frameSurcharges: Record<Exclude<FrameType, "unframed">, Partial<Record<PrintFormat, number>>> = {
@@ -87,7 +86,7 @@ export default function ProductView({ product, previousProduct, nextProduct }: P
       <p className="product-price">{totalPrice === null ? t.product.selectFormatPrice : <>{frame === "custom" && `${t.product.from} `}{totalPrice.toFixed(2).replace(".", ",")} €</>}</p>
       <p className="price-note">{format ? t.product.totalPrice : t.product.priceAfterSelection}</p>
       <p className="product-description">{t.product.description}</p>
-      <fieldset className="format-picker"><legend>{t.product.format}</legend><div>{formats.map(item => <button type="button" className={format === item ? "active" : ""} onClick={() => chooseFormat(item)} key={item}>{item}</button>)}</div></fieldset>
+      <fieldset className="format-picker"><legend>{t.product.format}</legend><div>{product.availableFormats.map(item => <button type="button" className={format === item ? "active" : ""} onClick={() => chooseFormat(item)} key={item}>{item}</button>)}</div></fieldset>
       <fieldset className="option-picker frame-picker"><legend>{t.product.frame}</legend><div className="option-grid">
         <button type="button" className={frame === "unframed" ? "active" : ""} onClick={() => setFrame("unframed")}>{t.product.unframed}</button>
         <button type="button" disabled={!frameAvailable} className={frame === "standard" ? "active" : ""} onClick={() => setFrame("standard")}>{t.product.standardFrame}</button>

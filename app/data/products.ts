@@ -11,8 +11,11 @@ export type Product = {
   artist: string;
   image: string | null;
   gallery: readonly (string | null)[];
+  availableFormats: readonly PrintFormat[];
   placeholder?: boolean;
 };
+
+const allFormats = Object.keys(formatPrices) as PrintFormat[];
 
 const product = (
   id: string,
@@ -20,9 +23,10 @@ const product = (
   title: string,
   artist: string,
   roomImages: readonly string[] = [],
+  availableFormats: readonly PrintFormat[] = allFormats,
 ): Product => {
   const image = asset(`${id}.webp`);
-  return { id, slug, title, artist, image, gallery: [image, ...roomImages.map(asset)] };
+  return { id, slug, title, artist, image, gallery: [image, ...roomImages.map(asset)], availableFormats };
 };
 
 const placeholder = (id: string, artist: string): Product => ({
@@ -32,6 +36,7 @@ const placeholder = (id: string, artist: string): Product => ({
   artist,
   image: null,
   gallery: [null],
+  availableFormats: allFormats,
   placeholder: true,
 });
 
