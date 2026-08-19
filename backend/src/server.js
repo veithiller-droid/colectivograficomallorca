@@ -10,6 +10,13 @@ const app = express();
 const port = Number(process.env.PORT || 3001);
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const origins = [process.env.STOREFRONT_ORIGIN, process.env.CMS_ORIGIN].filter(Boolean);
+const fulfillmentStatuses = ["new", "processing", "ready", "shipped", "completed", "canceled"];
+function requireCms(request, response, next) {
+  const expected = process.env.CMS_API_TOKEN;
+  const supplied = request.headers.authorization?.replace(/^Bearer\s+/i, "");
+  if (!expected || !supplied || supplied.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) return response.status(401).json({ error: "Unauthorized" });
+  next();
+}
 app.use(helmet());
 app.use(cors({ origin: origins.length ? origins : false }));
 app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (request, response) => {
@@ -22,7 +29,22 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
     } else if (event.type === "payment_intent.succeeded") {
       const intent = event.data.object;
       const paymentMethod = intent.payment_method ? await stripe.paymentMethods.retrieve(intent.payment_method) : null;
-      await query(`UPDATE orders SET status='paid',customer_email=$1,total_cents=$2,updated_at=NOW() WHERE stripe_payment_intent_id=$3`, [intent.receipt_email || paymentMethod?.billing_details?.email || null, intent.amount_received || intent.amount, intent.id]);
+      const billing = paymentMethod?.billing_details;
+      const shipping = intent.shipping;
+      await query(`UPDATE orders SET status='paid',fulfillment_status=CASE WHEN fulfillment_status='new' THEN 'new' ELSE fulfillment_status END,
+        customer_email=$1,customer_name=$2,customer_phone=$3,shipping_address=$4,total_cents=$5,updated_at=NOW()
+        WHERE stripe_payment_intent_id=$6`, [intent.receipt_email || billing?.email || null, shipping?.name || billing?.name || null,
+        shipping?.phone || billing?.phone || null, shipping?.address ? JSON.stringify(shipping.address) : null,
+        intent.amount_received || intent.amount, intent.id]);
+    } else if (event.type === "payment_intent.payment_failed") {
+      const intent = event.data.object;
+      await query(`UPDATE orders SET status='payment_failed',updated_at=NOW() WHERE stripe_payment_intent_id=$1`, [intent.id]);
+    } else if (event.type === "payment_intent.canceled") {
+      const intent = event.data.object;
+      await query(`UPDATE orders SET status='canceled',fulfillment_status='canceled',updated_at=NOW() WHERE stripe_payment_intent_id=$1`, [intent.id]);
+    } else if (event.type === "charge.refunded") {
+      const charge = event.data.object;
+      await query(`UPDATE orders SET status='refunded',fulfillment_status='canceled',updated_at=NOW() WHERE stripe_payment_intent_id=$1`, [charge.payment_intent]);
     }
     response.json({ received: true });
   } catch (error) { response.status(400).send(`Webhook error: ${error.message}`); }
@@ -112,6 +134,33 @@ app.post("/api/public/payment-intent", async (request, response, next) => {
     await query(`INSERT INTO orders(id,stripe_payment_intent_id,status,currency,total_cents) VALUES($1,$2,'pending','eur',$3)`, [orderId, intent.id, total]);
     for (const item of verified) await query(`INSERT INTO order_items(order_id,product_id,product_title,format,frame_id,quantity,unit_price_cents) VALUES($1,$2,$3,$4,$5,$6,$7)`, [orderId, item.productId, item.title, item.format, item.frameId, item.quantity, item.unitPriceCents]);
     response.status(201).json({ clientSecret: intent.client_secret, orderId });
+  } catch (error) { next(error); }
+});
+
+app.get("/api/cms/orders", requireCms, async (request, response, next) => {
+  try {
+    const status = request.query.status && fulfillmentStatuses.includes(String(request.query.status)) ? String(request.query.status) : null;
+    const result = await query(`SELECT o.*,
+      COALESCE(json_agg(json_build_object('id',oi.id,'productId',oi.product_id,'title',oi.product_title,'format',oi.format,
+      'frameId',oi.frame_id,'quantity',oi.quantity,'unitPriceCents',oi.unit_price_cents) ORDER BY oi.id)
+      FILTER (WHERE oi.id IS NOT NULL),'[]') AS items
+      FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id
+      WHERE o.status='paid' AND ($1::text IS NULL OR o.fulfillment_status=$1)
+      GROUP BY o.id ORDER BY o.created_at DESC LIMIT 250`, [status]);
+    response.json({ orders: result.rows });
+  } catch (error) { next(error); }
+});
+
+app.patch("/api/cms/orders/:id", requireCms, async (request, response, next) => {
+  try {
+    const fulfillmentStatus = String(request.body?.fulfillmentStatus || "");
+    if (!fulfillmentStatuses.includes(fulfillmentStatus)) return response.status(400).json({ error: "Invalid status" });
+    const internalNote = String(request.body?.internalNote || "").slice(0, 4000);
+    const result = await query(`UPDATE orders SET fulfillment_status=$1,internal_note=$2,
+      shipped_at=CASE WHEN $1='shipped' AND shipped_at IS NULL THEN NOW() ELSE shipped_at END,updated_at=NOW()
+      WHERE id=$3 RETURNING *`, [fulfillmentStatus, internalNote, request.params.id]);
+    if (!result.rowCount) return response.status(404).json({ error: "Order not found" });
+    response.json({ order: result.rows[0] });
   } catch (error) { next(error); }
 });
 

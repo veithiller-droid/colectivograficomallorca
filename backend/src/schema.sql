@@ -41,6 +41,13 @@ CREATE TABLE IF NOT EXISTS orders (
   total_cents INTEGER NOT NULL DEFAULT 0, customer_email TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_address JSONB;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_status TEXT NOT NULL DEFAULT 'new';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS internal_note TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS orders_fulfillment_idx ON orders(fulfillment_status,created_at DESC);
 CREATE TABLE IF NOT EXISTS order_items (
   id BIGSERIAL PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   product_id TEXT NOT NULL REFERENCES products(id), product_title TEXT NOT NULL, format TEXT NOT NULL,
