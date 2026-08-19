@@ -60,6 +60,12 @@ export const products: readonly Product[] = [
   product("cgm-ht006", "mallorca-pollenca", "Mallorca · Pollença", "Herví Tille", ["cgm-ht006-room002-a2.webp"]),
   product("cgm-ht007", "mallorca-soller", "Mallorca · Sóller", "Herví Tille"),
   product("cgm-ht008", "mallorca-son-servera", "Mallorca · Son Servera", "Herví Tille"),
+  product("cgm-ht009", "sporting-mallorca-golf", "Sporting Mallorca · Golf", "Herví Tille"),
+  product("cgm-ht010", "sporting-mallorca-tennis", "Sporting Mallorca · Tennis", "Herví Tille"),
+  product("cgm-ht011", "sporting-mallorca-motorcycle", "Sporting Mallorca · Motorcycle", "Herví Tille"),
+  product("cgm-ht012", "sporting-mallorca-cycling", "Sporting Mallorca · Cycling", "Herví Tille"),
+  product("cgm-ht013", "sporting-mallorca-roadster", "Sporting Mallorca · Roadster", "Herví Tille"),
+  product("cgm-ht014", "sporting-mallorca-free-diving", "Sporting Mallorca · Free Diving", "Herví Tille"),
 
   product("cgm-mv001", "fruites-de-mallorca-figues", "Fruites de Mallorca · Figues", "Mateo Vilar"),
   product("cgm-mv002", "fruites-de-mallorca-llimones", "Fruites de Mallorca · Llimones", "Mateo Vilar", ["cgm-mv004-room007-a2.webp"]),
