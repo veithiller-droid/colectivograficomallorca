@@ -6,9 +6,6 @@ import { CartProvider } from "./components/cart-provider";
 export const metadata: Metadata = {
   title: "Colectivo Gráfico Mallorca",
   description: "Obra gráfica creada en Mallorca. Ediciones de artistas de la isla.",
-  other: {
-    "codex-preview": "development",
-  },
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
