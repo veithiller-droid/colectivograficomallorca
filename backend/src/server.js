@@ -11,8 +11,13 @@ import { pool, query } from "./db.js";
 const app = express();
 const port = Number(process.env.PORT || 3001);
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
-const origins = [process.env.STOREFRONT_ORIGIN, process.env.CMS_ORIGIN].filter(Boolean);
-const fulfillmentStatuses = ["new", "processing", "ready", "shipped", "completed", "canceled"];
+const origins = [
+  process.env.STOREFRONT_ORIGIN,
+  process.env.CMS_ORIGIN,
+  "https://colectivograficomallorca.com",
+  "https://www.colectivograficomallorca.com",
+  "https://colectivograficomallorca-production.up.railway.app"
+].filter(Boolean);const fulfillmentStatuses = ["new", "processing", "ready", "shipped", "completed", "canceled"];
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024, files: 1 }, fileFilter: (_request, file, callback) => callback(null, ["image/jpeg","image/png","image/webp"].includes(file.mimetype)) });
 function requireCms(request, response, next) {
   const expected = process.env.CMS_API_TOKEN;
