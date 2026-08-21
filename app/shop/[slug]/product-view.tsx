@@ -24,6 +24,13 @@ type ProductViewProps = {
 
 const artistTransitionKey = "cgm-artist-transition";
 
+const formatLabel = (format: PrintFormat) => ({
+  A6: "Postkarte",
+  A4: "20 × 30 cm",
+  A3: "30 × 40 cm",
+  A2: "40 × 60 cm",
+}[format]);
+
 function ProductViewContent({ product, previousProduct, nextProduct }: Omit<ProductViewProps, "requestedSlug">) {
   const router = useRouter();
   const [format, setFormat] = useState<PrintFormat | null>(null);
@@ -97,7 +104,7 @@ function ProductViewContent({ product, previousProduct, nextProduct }: Omit<Prod
       <p className="product-price">{totalPrice === null ? t.product.selectFormatPrice : <>{frame === "custom" && `${t.product.from} `}{totalPrice.toFixed(2).replace(".", ",")} €</>}</p>
       <p className="price-note">{format ? t.product.totalPrice : t.product.priceAfterSelection}</p>
       <p className="product-description">{t.product.description}</p>
-      <fieldset className="format-picker"><legend>{t.product.format}</legend><div>{product.availableFormats.map(item => <button type="button" className={format === item ? "active" : ""} onClick={() => chooseFormat(item)} key={item}>{item}</button>)}</div></fieldset>
+      <fieldset className="format-picker"><legend>{t.product.format}</legend><div>{product.availableFormats.map(item => <button type="button" className={format === item ? "active" : ""} onClick={() => chooseFormat(item)} key={item}>{formatLabel(item)}</button>)}</div></fieldset>
       <fieldset className="option-picker frame-picker"><legend>{t.product.frame}</legend><div className="option-grid">
         <button type="button" className={frame === "unframed" ? "active" : ""} onClick={() => setFrame("unframed")}>{t.product.unframed}</button>
         <button type="button" disabled={!frameAvailable} className={frame === "standard" ? "active" : ""} onClick={() => setFrame("standard")}>{t.product.standardFrame}</button>
@@ -108,7 +115,7 @@ function ProductViewContent({ product, previousProduct, nextProduct }: Omit<Prod
       {frame === "aluminium" && <fieldset className="option-picker color-picker"><legend>{t.product.frameColor}</legend><div className="color-options">{(["silver", "black", "gold"] as FrameColor[]).map(color => <button type="button" className={frameColor === color ? "active" : ""} onClick={() => setFrameColor(color)} key={color}><span className={`color-dot ${color}`} />{t.product.colors[color]}</button>)}</div><p>{t.product.realGlass}</p></fieldset>}
       {frame === "custom" && <p className="custom-frame-note">{t.product.customInfo}</p>}
       <button className="add-to-cart" type="button" disabled={!format} onClick={addToCart}>{frame === "custom" ? t.product.request : added ? (t.product.cart === "In den Warenkorb" ? "Hinzugefügt" : "Añadido") : t.product.cart}</button>
-      <div className="technical-info"><h2>{t.product.technical}</h2><dl><div><dt>{t.product.product}</dt><dd>Fine Art Print</dd></div><div><dt>{t.product.artist}</dt><dd>{product.artist}</dd></div><div><dt>{t.product.format}</dt><dd>{format ?? "–"}</dd></div><div><dt>{t.product.frame}</dt><dd>{frame === "aluminium" ? `${t.product.aluminiumFrame} · ${t.product.colors[frameColor]} · ${t.product.realGlass}` : t.product.frameValues[frame]}</dd></div><div><dt>{t.product.origin}</dt><dd>Made, selected and printed in Mallorca</dd></div><div><dt>{t.product.shipping}</dt><dd>{t.product.shippingValue}</dd></div></dl></div>
+      <div className="technical-info"><h2>{t.product.technical}</h2><dl><div><dt>{t.product.product}</dt><dd>Fine Art Print</dd></div><div><dt>{t.product.artist}</dt><dd>{product.artist}</dd></div><div><dt>{t.product.format}</dt><dd>{format ? formatLabel(format) : "–"}</dd></div><div><dt>{t.product.frame}</dt><dd>{frame === "aluminium" ? `${t.product.aluminiumFrame} · ${t.product.colors[frameColor]} · ${t.product.realGlass}` : t.product.frameValues[frame]}</dd></div><div><dt>{t.product.origin}</dt><dd>Made, selected and printed in Mallorca</dd></div><div><dt>{t.product.shipping}</dt><dd>{t.product.shippingValue}</dd></div></dl></div>
     </div>
     </section>
   </>;
