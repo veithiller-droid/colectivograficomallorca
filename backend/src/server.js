@@ -23,7 +23,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 
 const newsletterBaseUrl = String(process.env.STOREFRONT_ORIGIN || "https://colectivograficomallorca.com").replace(/\/$/, "");
 const newsletterFrom = process.env.RESEND_FROM || "Colectivo Gráfico Mallorca <newsletter@colectivograficomallorca.com>";
 const token = () => crypto.randomBytes(24).toString("hex");
-const htmlEscape = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]);
+const htmlEscape = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 async function resend(pathname, payload, idempotencyKey) {
   if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
   const result = await fetch(`https://api.resend.com${pathname}`, {
