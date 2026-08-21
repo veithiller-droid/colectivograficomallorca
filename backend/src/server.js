@@ -53,6 +53,143 @@ function campaignMail(campaign, locale, unsubscribeUrl) {
   };
 }
 
+
+// CGM ORDER CONFIRMATION MAIL HELPER V1
+function orderConfirmationMail(order, items) {
+  const es = order.locale === "es";
+
+  const money = cents =>
+    new Intl.NumberFormat(es ? "es-ES" : "de-DE", {
+      style: "currency",
+      currency: "EUR"
+    }).format(Number(cents || 0) / 100);
+
+  const frameNames = {
+    unframed: es ? "sin marco" : "ungerahmt",
+    "standard-black": es ? "marco estándar negro" : "Standardrahmen Schwarz",
+    "aluminium-silver": es ? "aluminio plata con cristal" : "Aluminium Silber mit Echtglas",
+    "aluminium-black": es ? "aluminio negro con cristal" : "Aluminium Schwarz mit Echtglas",
+    "aluminium-gold": es ? "aluminio oro con cristal" : "Aluminium Gold mit Echtglas"
+  };
+
+  const formatNames = {
+    A6: es ? "Postal" : "Postkarte",
+    A4: "20 × 30 cm",
+    A3: "30 × 40 cm",
+    A2: "40 × 60 cm"
+  };
+
+  const rows = items.map(item => {
+    const meta = [
+      formatNames[item.format] || item.format,
+      frameNames[item.frame_id] || item.frame_id
+    ].filter(Boolean).join(" · ");
+
+    return `
+      <tr>
+        <td style="padding:14px 0;border-bottom:1px solid #162d2925">
+          <strong style="display:block;font:700 14px Arial,sans-serif">
+            ${htmlEscape(item.product_title)}
+          </strong>
+          <span style="display:block;margin-top:5px;font:12px Arial,sans-serif;opacity:.65">
+            ${htmlEscape(meta)} · ${item.quantity}×
+          </span>
+        </td>
+        <td style="padding:14px 0;border-bottom:1px solid #162d2925;text-align:right;font:14px Arial,sans-serif">
+          ${money(item.unit_price_cents * item.quantity)}
+        </td>
+      </tr>`;
+  }).join("");
+
+  const orderNo = String(order.id || "").slice(0, 8).toUpperCase();
+
+  const subject = es
+    ? `Gracias por tu pedido · ${orderNo}`
+    : `Vielen Dank für deine Bestellung · ${orderNo}`;
+
+  const heading = es
+    ? "Gracias por tu pedido."
+    : "Vielen Dank für deine Bestellung.";
+
+  const intro = es
+    ? "Hemos recibido tu pago y tu pedido ya está en proceso. Prepararemos todo con cuidado en Artà."
+    : "Wir haben deine Zahlung erhalten und deine Bestellung wird jetzt bearbeitet. Wir bereiten alles sorgfältig in Artà vor.";
+
+  const follow = es
+    ? "Cuando tu pedido esté listo para el envío, nos pondremos en contacto contigo si fuera necesario."
+    : "Sobald deine Bestellung versandbereit ist, melden wir uns bei Bedarf noch einmal bei dir.";
+
+  const shopLabel = es ? "Volver a la tienda" : "Zurück zum Shop";
+  const orderLabel = es ? "Pedido" : "Bestellung";
+  const totalLabel = es ? "Total" : "Gesamtsumme";
+
+  return {
+    subject,
+    html: `<!doctype html>
+<html>
+<body style="margin:0;background:#f6efe5;color:#162d29">
+  <div style="max-width:680px;margin:auto;padding:55px 28px">
+
+    <div style="font:900 13px/.85 Arial,sans-serif">
+      COLECTIVO<br>GRÁFICO<br>MALLORCA
+    </div>
+
+    <h1 style="font:400 50px/.95 Georgia,serif;letter-spacing:-.04em;margin:55px 0 28px">
+      ${heading}
+    </h1>
+
+    <p style="font:17px/1.65 Georgia,serif;margin:0 0 18px">${intro}</p>
+    <p style="font:17px/1.65 Georgia,serif;margin:0 0 34px">${follow}</p>
+
+    <div style="border-top:1px solid #162d2940;border-bottom:1px solid #162d2940;padding:18px 0;margin-bottom:24px">
+      <span style="font:10px Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase">${orderLabel}</span>
+      <strong style="float:right;font:18px Georgia,serif">${orderNo}</strong>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse">
+      ${rows}
+    </table>
+
+    <div style="padding:20px 0 34px;text-align:right">
+      <span style="font:11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.1em">${totalLabel}</span>
+      <strong style="display:block;margin-top:6px;font:30px Georgia,serif">
+        ${money(order.total_cents)}
+      </strong>
+    </div>
+
+    <p style="margin:0 0 40px">
+      <a href="${newsletterBaseUrl}/shop"
+         style="display:inline-block;background:#c85f46;color:#fff;text-decoration:none;padding:14px 20px;font:700 12px Arial,sans-serif">
+        ${shopLabel}
+      </a>
+    </p>
+
+    <div style="border-top:1px solid #162d2940;padding-top:20px;font:11px/1.6 Arial,sans-serif">
+      Colectivo Gráfico Mallorca · Artà · Mallorca<br>
+      info@colectivograficomallorca.com
+    </div>
+
+  </div>
+</body>
+</html>`,
+    text:
+`${heading}
+
+${intro}
+${follow}
+
+${orderLabel}: ${orderNo}
+
+${items.map(item =>
+  `${item.quantity}× ${item.product_title} — ${money(item.unit_price_cents * item.quantity)}`
+).join("\n")}
+
+${totalLabel}: ${money(order.total_cents)}
+
+${shopLabel}: ${newsletterBaseUrl}/shop`
+  };
+}
+
 function requireCms(request, response, next) {
   const expected = process.env.CMS_API_TOKEN;
   const supplied = request.headers.authorization?.replace(/^Bearer\s+/i, "");
@@ -78,6 +215,43 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
         WHERE stripe_payment_intent_id=$6`, [intent.receipt_email || billing?.email || null, shipping?.name || billing?.name || null,
         shipping?.phone || billing?.phone || null, shipping?.address ? JSON.stringify(shipping.address) : null,
         intent.amount_received || intent.amount, intent.id]);
+
+      // CGM SEND ORDER CONFIRMATION V1
+      const paidOrder = (await query(
+        "SELECT * FROM orders WHERE stripe_payment_intent_id=$1",
+        [intent.id]
+      )).rows[0];
+
+      if (paidOrder?.customer_email && !paidOrder.confirmation_email_sent_at) {
+        const orderItems = (await query(
+          "SELECT product_title,format,frame_id,quantity,unit_price_cents FROM order_items WHERE order_id=$1 ORDER BY id",
+          [paidOrder.id]
+        )).rows;
+
+        const mail = orderConfirmationMail(paidOrder, orderItems);
+
+        try {
+          await resend("/emails", {
+            from: newsletterFrom,
+            to: [paidOrder.customer_email],
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+            tags: [{ name: "category", value: "order_confirmation" }]
+          }, `order-confirmation/${paidOrder.id}`);
+
+          await query(
+            "UPDATE orders SET confirmation_email_sent_at=NOW(),updated_at=NOW() WHERE id=$1 AND confirmation_email_sent_at IS NULL",
+            [paidOrder.id]
+          );
+        } catch (mailError) {
+          console.error("Order confirmation email failed", {
+            orderId: paidOrder.id,
+            error: mailError.message
+          });
+        }
+      }
+
     } else if (event.type === "payment_intent.payment_failed") {
       const intent = event.data.object;
       await query(`UPDATE orders SET status='payment_failed',updated_at=NOW() WHERE stripe_payment_intent_id=$1`, [intent.id]);
@@ -235,7 +409,7 @@ app.post("/api/public/payment-intent", async (request, response, next) => {
     const orderId = crypto.randomUUID();
     const total = verified.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0);
     const intent = await stripe.paymentIntents.create({ amount: total, currency: "eur", automatic_payment_methods: { enabled: true }, metadata: { orderId } });
-    await query(`INSERT INTO orders(id,stripe_payment_intent_id,status,currency,total_cents) VALUES($1,$2,'pending','eur',$3)`, [orderId, intent.id, total]);
+    await query(`INSERT INTO orders(id,stripe_payment_intent_id,status,currency,total_cents,locale) VALUES($1,$2,'pending','eur',$3,$4)`, [orderId, intent.id, total, locale]);
     for (const item of verified) await query(`INSERT INTO order_items(order_id,product_id,product_title,format,frame_id,quantity,unit_price_cents) VALUES($1,$2,$3,$4,$5,$6,$7)`, [orderId, item.productId, item.title, item.format, item.frameId, item.quantity, item.unitPriceCents]);
     response.status(201).json({ clientSecret: intent.client_secret, orderId });
   } catch (error) { next(error); }
