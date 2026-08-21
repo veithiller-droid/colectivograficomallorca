@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const backendUrl = String(process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, "");
+const backendUrl = String(process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
 export async function GET(request: Request) {
   if (!backendUrl) return NextResponse.json({ error: "Backend not configured" }, { status: 503 });
