@@ -41,9 +41,10 @@ function campaignMail(campaign, locale, unsubscribeUrl) {
   const preheader = es ? campaign.preheader_es : campaign.preheader_de;
   const heading = es ? campaign.heading_es : campaign.heading_de;
   const body = es ? campaign.body_es : campaign.body_de;
-  const ctaLabel = es ? campaign.cta_label_es : campaign.cta_label_de;
+  const ctaLabel = (es ? campaign.cta_label_es : campaign.cta_label_de) || (es ? "Ir a la tienda" : "Jetzt zum Shop");
+  const ctaUrl = campaign.cta_url || `${newsletterBaseUrl}/shop`;
   const paragraphs = String(body || "").split(/\n{2,}/).map(value => `<p style="font:17px/1.65 Georgia,serif;margin:0 0 20px">${htmlEscape(value).replace(/\n/g,"<br>")}</p>`).join("");
-  const cta = ctaLabel && campaign.cta_url ? `<p style="margin:34px 0"><a href="${htmlEscape(campaign.cta_url)}" style="display:inline-block;background:#c85f46;color:#fff;text-decoration:none;padding:14px 20px;font:700 12px Arial,sans-serif">${htmlEscape(ctaLabel)}</a></p>` : "";
+  const cta = `<p style="margin:34px 0"><a href="${htmlEscape(ctaUrl)}" style="display:inline-block;background:#c85f46;color:#fff;text-decoration:none;padding:14px 20px;font:700 12px Arial,sans-serif">${htmlEscape(ctaLabel)}</a></p>`;
   const unsubscribe = es ? "Darse de baja" : "Newsletter abbestellen";
   return {
     subject,
