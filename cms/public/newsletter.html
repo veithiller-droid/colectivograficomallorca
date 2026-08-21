@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Newsletter · Colectivo CMS</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/newsletter.css">
+</head>
+<body>
+<header>
+  <div><p class="eyebrow">COLECTIVO GRÁFICO MALLORCA</p><strong>CMS</strong></div>
+  <nav>
+    <a href="/">Bestellungen</a><a href="/products">Produkte</a><a href="/homepage">Titelseite</a><a class="nav-active" href="/newsletter">Newsletter</a>
+  </nav>
+  <form method="post" action="/logout"><button class="quiet">Abmelden</button></form>
+</header>
+<main>
+  <section class="hero">
+    <div><p class="eyebrow">KOMMUNIKATION</p><h1>Newsletter</h1></div>
+    <div class="summary" id="subscriber-summary"><strong>–</strong><span>aktive Abonnenten</span></div>
+  </section>
+
+  <section class="newsletter-layout">
+    <form id="campaign-form" class="editor-card">
+      <input type="hidden" id="campaign-id">
+      <div class="editor-head"><div><p class="eyebrow">EDITOR</p><h2>Newsletter erstellen</h2></div><span id="save-state">Neuer Entwurf</span></div>
+      <div class="language-columns">
+        <section>
+          <h3>Deutsch</h3>
+          <label>Betreff<input id="subject-de" maxlength="180" required></label>
+          <label>Preheader<input id="preheader-de" maxlength="220"></label>
+          <label>Headline<input id="heading-de" maxlength="180"></label>
+          <label>Text<textarea id="body-de" rows="11" required></textarea></label>
+          <label>Button-Text<input id="cta-label-de" maxlength="80"></label>
+        </section>
+        <section>
+          <h3>Español</h3>
+          <label>Asunto<input id="subject-es" maxlength="180" required></label>
+          <label>Preheader<input id="preheader-es" maxlength="220"></label>
+          <label>Titular<input id="heading-es" maxlength="180"></label>
+          <label>Texto<textarea id="body-es" rows="11" required></textarea></label>
+          <label>Texto del botón<input id="cta-label-es" maxlength="80"></label>
+        </section>
+      </div>
+      <label class="full-field">CTA-Link<input id="cta-url" type="url" placeholder="https://colectivograficomallorca.com/shop"></label>
+      <div class="campaign-actions">
+        <button type="submit" class="primary">Entwurf speichern</button>
+        <div class="test-send"><input id="test-email" type="email" placeholder="Testadresse"><select id="test-locale"><option value="de">DE</option><option value="es">ES</option></select><button type="button" id="test-button">Test senden</button></div>
+        <button type="button" id="send-button" class="send-button">An alle Abonnenten senden</button>
+      </div>
+      <p id="editor-message" class="editor-message"></p>
+    </form>
+
+    <aside class="preview-card">
+      <p class="eyebrow">VORSCHAU</p>
+      <div class="preview-switch"><button class="active" type="button" data-preview-locale="de">DE</button><button type="button" data-preview-locale="es">ES</button></div>
+      <div id="preview" class="mail-preview"></div>
+    </aside>
+  </section>
+
+  <section class="cms-section">
+    <div class="section-heading"><div><p class="eyebrow">EMPFÄNGER</p><h2>Abonnenten</h2></div><div class="subscriber-filters" id="subscriber-filters"></div></div>
+    <div id="subscribers" class="subscriber-table"><p>Abonnenten werden geladen …</p></div>
+  </section>
+
+  <section class="cms-section">
+    <div class="section-heading"><div><p class="eyebrow">ARCHIV</p><h2>Versandhistorie</h2></div></div>
+    <div id="campaigns" class="campaign-list"><p>Historie wird geladen …</p></div>
+  </section>
+</main>
+<script src="/newsletter.js" defer></script>
+</body>
+</html>

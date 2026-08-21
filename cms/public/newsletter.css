@@ -1,0 +1,32 @@
+.newsletter-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.65fr);gap:28px;align-items:start;padding-bottom:90px}
+.editor-card,.preview-card{background:#fffaf3;border:1px solid #162d2928;padding:30px}
+.editor-head,.section-heading{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:28px}
+.editor-head h2,.section-heading h2{font:36px/1 Georgia,serif;margin:0}
+.editor-head>span{font-size:10px;opacity:.55}
+.language-columns{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.language-columns>section{display:grid;gap:15px}
+.language-columns h3{font:25px Georgia,serif;margin:0 0 5px}
+.editor-card label{display:grid;gap:7px;font-size:9px;text-transform:uppercase;letter-spacing:.11em}
+.editor-card input,.editor-card textarea,.editor-card select,.test-send input,.test-send select{width:100%;border:1px solid #162d2940;background:var(--paper);color:var(--ink);padding:12px}
+.editor-card textarea{resize:vertical;line-height:1.5}
+.full-field{margin-top:22px}
+.campaign-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:25px;padding-top:22px;border-top:1px solid #162d2928}
+.campaign-actions button{border:1px solid #162d2940;background:transparent;color:var(--ink);padding:12px 15px}
+.campaign-actions .primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.campaign-actions .send-button{margin-left:auto;background:var(--coral);color:white;border-color:var(--coral)}
+.test-send{display:flex;gap:6px;align-items:center}.test-send input{width:210px}.test-send select{width:62px}
+.editor-message{font-size:11px;min-height:18px;margin:15px 0 0;color:var(--coral)}
+.preview-card{position:sticky;top:105px}
+.preview-switch{display:flex;gap:6px;margin:18px 0}.preview-switch button{border:1px solid #162d2940;background:transparent;padding:7px 10px}.preview-switch button.active{background:var(--ink);color:var(--paper)}
+.mail-preview{border:1px solid #162d2928;background:#f6efe5;min-height:500px;padding:34px 28px;font-family:Georgia,serif}
+.mail-preview .preheader{font:10px Arial,sans-serif;opacity:.55;text-transform:uppercase;letter-spacing:.08em}
+.mail-preview h3{font:38px/1 Georgia,serif;margin:35px 0 24px;letter-spacing:-.03em}
+.mail-preview p{font:16px/1.6 Georgia,serif;white-space:pre-line}
+.mail-preview a{display:inline-block;margin-top:25px;background:var(--coral);color:white;padding:13px 18px;text-decoration:none;font:700 11px Arial,sans-serif}
+.cms-section{padding:70px 0;border-top:1px solid #162d2930}
+.subscriber-filters{display:flex;gap:5px;flex-wrap:wrap}.subscriber-filters button{border:1px solid #162d2940;background:transparent;padding:9px 11px;color:var(--ink)}.subscriber-filters button.active{background:var(--ink);color:var(--paper)}
+.subscriber-table{border-top:1px solid #162d2930}
+.subscriber-row{display:grid;grid-template-columns:minmax(220px,1fr) 90px 110px 170px;gap:20px;align-items:center;padding:14px 0;border-bottom:1px solid #162d291f;font-size:12px}
+.subscriber-row strong{font-weight:500}.subscriber-row small{opacity:.55}.status-pill{display:inline-block;width:max-content;padding:5px 8px;background:var(--sand);font-size:9px;text-transform:uppercase;letter-spacing:.08em}.status-pill.subscribed{background:#d7e5dd}.status-pill.unsubscribed{background:#ecd4cd}
+.campaign-list{display:grid;gap:10px}.campaign-row{display:grid;grid-template-columns:1fr auto auto auto;gap:18px;align-items:center;border:1px solid #162d2928;background:#fffaf3;padding:18px 20px}.campaign-row h3{font:22px Georgia,serif;margin:0 0 4px}.campaign-row small{opacity:.55}.campaign-row button{border:1px solid #162d2940;background:transparent;padding:9px 12px;color:var(--ink)}
+@media(max-width:900px){.newsletter-layout{grid-template-columns:1fr}.preview-card{position:static}.language-columns{grid-template-columns:1fr}.subscriber-row{grid-template-columns:1fr 70px}.subscriber-row>*:nth-child(3),.subscriber-row>*:nth-child(4){display:none}.campaign-row{grid-template-columns:1fr auto}.campaign-row>*:nth-child(3){display:none}.campaign-actions .send-button{margin-left:0}}

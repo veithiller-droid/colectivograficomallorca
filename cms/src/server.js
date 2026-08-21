@@ -42,6 +42,27 @@ app.post("/logout", (_request, response) => {
   response.setHeader("Set-Cookie", `${cookieName}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
   response.redirect("/");
 });
+// CGM NEWSLETTER CMS PROXY V1
+app.get("/api/newsletter/subscribers", requireLogin, async (_request,response) => {
+  const result=await backend("/api/cms/newsletter/subscribers"); response.status(result.status).send(await result.text());
+});
+app.get("/api/newsletter/campaigns", requireLogin, async (_request,response) => {
+  const result=await backend("/api/cms/newsletter/campaigns"); response.status(result.status).send(await result.text());
+});
+app.post("/api/newsletter/campaigns", requireLogin, async (request,response) => {
+  const result=await backend("/api/cms/newsletter/campaigns",{method:"POST",body:JSON.stringify(request.body)}); response.status(result.status).send(await result.text());
+});
+app.patch("/api/newsletter/campaigns/:id", requireLogin, async (request,response) => {
+  const result=await backend(`/api/cms/newsletter/campaigns/${encodeURIComponent(request.params.id)}`,{method:"PATCH",body:JSON.stringify(request.body)}); response.status(result.status).send(await result.text());
+});
+app.post("/api/newsletter/campaigns/:id/test", requireLogin, async (request,response) => {
+  const result=await backend(`/api/cms/newsletter/campaigns/${encodeURIComponent(request.params.id)}/test`,{method:"POST",body:JSON.stringify(request.body)}); response.status(result.status).send(await result.text());
+});
+app.post("/api/newsletter/campaigns/:id/send", requireLogin, async (request,response) => {
+  const result=await backend(`/api/cms/newsletter/campaigns/${encodeURIComponent(request.params.id)}/send`,{method:"POST",body:JSON.stringify(request.body||{})}); response.status(result.status).send(await result.text());
+});
+
+
 app.get("/api/orders", requireLogin, async (request, response) => {
   const status = request.query.status ? `?status=${encodeURIComponent(String(request.query.status))}` : "";
   const result = await backend(`/api/cms/orders${status}`);
@@ -105,6 +126,8 @@ app.get("/index.html", (request, response) => authenticated(request) ? response.
 app.get("/products", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "products.html")) : response.redirect("/"));
 app.get("/products.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "products.html")) : response.redirect("/"));
 app.get("/homepage", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "homepage.html")) : response.redirect("/"));
+app.get("/newsletter", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "newsletter.html")) : response.redirect("/"));
+app.get("/newsletter.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "newsletter.html")) : response.redirect("/"));
 app.get("/homepage.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "homepage.html")) : response.redirect("/"));
 app.use(express.static(root, { index: false }));
 

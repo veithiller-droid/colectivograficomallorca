@@ -78,3 +78,24 @@ CREATE TABLE IF NOT EXISTS import_runs (
 CREATE INDEX IF NOT EXISTS products_artist_idx ON products(artist_id,sort_order);
 CREATE INDEX IF NOT EXISTS product_images_product_idx ON product_images(product_id,sort_order);
 ALTER TABLE order_items ALTER COLUMN product_id DROP NOT NULL;
+
+
+-- CGM NEWSLETTER V1
+ALTER TABLE newsletter_subscribers ADD COLUMN IF NOT EXISTS confirmation_token TEXT;
+ALTER TABLE newsletter_subscribers ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT;
+ALTER TABLE newsletter_subscribers ADD COLUMN IF NOT EXISTS confirmation_sent_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS newsletter_confirmation_token_idx ON newsletter_subscribers(confirmation_token) WHERE confirmation_token IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS newsletter_unsubscribe_token_idx ON newsletter_subscribers(unsubscribe_token) WHERE unsubscribe_token IS NOT NULL;
+CREATE TABLE IF NOT EXISTS newsletter_campaigns (
+  id TEXT PRIMARY KEY,
+  subject_de TEXT NOT NULL DEFAULT '', subject_es TEXT NOT NULL DEFAULT '',
+  preheader_de TEXT NOT NULL DEFAULT '', preheader_es TEXT NOT NULL DEFAULT '',
+  heading_de TEXT NOT NULL DEFAULT '', heading_es TEXT NOT NULL DEFAULT '',
+  body_de TEXT NOT NULL DEFAULT '', body_es TEXT NOT NULL DEFAULT '',
+  cta_label_de TEXT NOT NULL DEFAULT '', cta_label_es TEXT NOT NULL DEFAULT '',
+  cta_url TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','sending','sent','failed')),
+  recipient_count INTEGER NOT NULL DEFAULT 0, failed_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), sent_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS newsletter_campaigns_created_idx ON newsletter_campaigns(created_at DESC);

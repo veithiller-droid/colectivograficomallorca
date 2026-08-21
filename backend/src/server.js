@@ -19,6 +19,39 @@ const origins = [
   "https://colectivograficomallorca-production.up.railway.app"
 ].filter(Boolean);const fulfillmentStatuses = ["new", "processing", "ready", "shipped", "completed", "canceled"];
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024, files: 1 }, fileFilter: (_request, file, callback) => callback(null, ["image/jpeg","image/png","image/webp"].includes(file.mimetype)) });
+// CGM NEWSLETTER HELPERS V1
+const newsletterBaseUrl = String(process.env.STOREFRONT_ORIGIN || "https://colectivograficomallorca.com").replace(/\/$/, "");
+const newsletterFrom = process.env.RESEND_FROM || "Colectivo Gráfico Mallorca <newsletter@colectivograficomallorca.com>";
+const token = () => crypto.randomBytes(24).toString("hex");
+const htmlEscape = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]);
+async function resend(pathname, payload, idempotencyKey) {
+  if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
+  const result = await fetch(`https://api.resend.com${pathname}`, {
+    method:"POST",
+    headers:{authorization:`Bearer ${process.env.RESEND_API_KEY}`,"content-type":"application/json",...(idempotencyKey?{"Idempotency-Key":idempotencyKey}:{})},
+    body:JSON.stringify(payload)
+  });
+  const text = await result.text();
+  if (!result.ok) throw new Error(`Resend ${result.status}: ${text}`);
+  return text ? JSON.parse(text) : {};
+}
+function campaignMail(campaign, locale, unsubscribeUrl) {
+  const es = locale === "es";
+  const subject = es ? campaign.subject_es : campaign.subject_de;
+  const preheader = es ? campaign.preheader_es : campaign.preheader_de;
+  const heading = es ? campaign.heading_es : campaign.heading_de;
+  const body = es ? campaign.body_es : campaign.body_de;
+  const ctaLabel = es ? campaign.cta_label_es : campaign.cta_label_de;
+  const paragraphs = String(body || "").split(/\n{2,}/).map(value => `<p style="font:17px/1.65 Georgia,serif;margin:0 0 20px">${htmlEscape(value).replace(/\n/g,"<br>")}</p>`).join("");
+  const cta = ctaLabel && campaign.cta_url ? `<p style="margin:34px 0"><a href="${htmlEscape(campaign.cta_url)}" style="display:inline-block;background:#c85f46;color:#fff;text-decoration:none;padding:14px 20px;font:700 12px Arial,sans-serif">${htmlEscape(ctaLabel)}</a></p>` : "";
+  const unsubscribe = es ? "Darse de baja" : "Newsletter abbestellen";
+  return {
+    subject,
+    html:`<!doctype html><html><body style="margin:0;background:#f6efe5;color:#162d29"><div style="display:none;max-height:0;overflow:hidden">${htmlEscape(preheader)}</div><div style="max-width:680px;margin:auto;padding:55px 28px"><div style="font:900 13px/.85 Arial,sans-serif">COLECTIVO<br>GRÁFICO<br>MALLORCA</div><h1 style="font:400 52px/.95 Georgia,serif;letter-spacing:-.04em;margin:55px 0 32px">${htmlEscape(heading || subject)}</h1>${paragraphs}${cta}<div style="border-top:1px solid #162d2940;margin-top:55px;padding-top:22px;font:11px/1.5 Arial,sans-serif"><a href="${htmlEscape(unsubscribeUrl)}" style="color:#162d29">${unsubscribe}</a><br>Artà · Mallorca</div></div></body></html>`,
+    text:`${heading || subject}\n\n${body}\n\n${ctaLabel && campaign.cta_url ? `${ctaLabel}: ${campaign.cta_url}\n\n` : ""}${unsubscribe}: ${unsubscribeUrl}`
+  };
+}
+
 function requireCms(request, response, next) {
   const expected = process.env.CMS_API_TOKEN;
   const supplied = request.headers.authorization?.replace(/^Bearer\s+/i, "");
@@ -128,17 +161,53 @@ app.get("/api/public/products/:slug", async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
+// CGM NEWSLETTER PUBLIC V1
 app.post("/api/public/newsletter", async (request, response, next) => {
   try {
     const email = String(request.body?.email || "").trim().toLowerCase();
-    const locale = ["de", "es", "en", "fr"].includes(request.body?.locale) ? request.body.locale : "de";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: "Invalid email" });
-    await query(`INSERT INTO newsletter_subscribers(email,locale,status) VALUES($1,$2,'pending')
-      ON CONFLICT(email) DO UPDATE SET locale=EXCLUDED.locale,status='pending',consent_at=NOW(),unsubscribed_at=NULL`,
-      [email, locale]);
-    response.status(202).json({ accepted: true });
+    const locale = request.body?.locale === "es" ? "es" : "de";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error:"Invalid email" });
+    const confirmationToken = token();
+    const unsubscribeToken = token();
+    await query(`INSERT INTO newsletter_subscribers(email,locale,status,confirmation_token,unsubscribe_token,consent_at,confirmation_sent_at)
+      VALUES($1,$2,'pending',$3,$4,NOW(),NOW())
+      ON CONFLICT(email) DO UPDATE SET locale=EXCLUDED.locale,status='pending',confirmation_token=EXCLUDED.confirmation_token,
+      unsubscribe_token=COALESCE(newsletter_subscribers.unsubscribe_token,EXCLUDED.unsubscribe_token),consent_at=NOW(),confirmation_sent_at=NOW(),unsubscribed_at=NULL`,
+      [email,locale,confirmationToken,unsubscribeToken]);
+    const confirmUrl = `${newsletterBaseUrl}/api/newsletter/confirm?token=${encodeURIComponent(confirmationToken)}`;
+    const es = locale === "es";
+    await resend("/emails", {
+      from:newsletterFrom,to:[email],
+      subject:es ? "Confirma tu suscripción" : "Newsletter-Anmeldung bestätigen",
+      html:`<div style="font-family:Arial,sans-serif;color:#162d29;max-width:620px;margin:auto;padding:40px"><h1 style="font-family:Georgia,serif;font-weight:400">${es?"Confirma tu suscripción":"Anmeldung bestätigen"}</h1><p>${es?"Haz clic en el botón para confirmar que deseas recibir el newsletter de Colectivo Gráfico Mallorca.":"Klicke auf den Button, um zu bestätigen, dass du den Newsletter von Colectivo Gráfico Mallorca erhalten möchtest."}</p><p><a href="${confirmUrl}" style="display:inline-block;background:#c85f46;color:white;padding:13px 18px;text-decoration:none">${es?"Confirmar":"Bestätigen"}</a></p></div>`,
+      text:`${es?"Confirmar suscripción":"Newsletter-Anmeldung bestätigen"}: ${confirmUrl}`,
+      tags:[{name:"category",value:"newsletter_confirm"}]
+    }, `newsletter-confirm/${email}/${confirmationToken.slice(0,12)}`);
+    response.status(202).json({ accepted:true });
   } catch (error) { next(error); }
 });
+app.get("/api/public/newsletter/confirm", async (request,response,next) => {
+  try {
+    const supplied=String(request.query.token||"");
+    const result=await query(`UPDATE newsletter_subscribers SET status='subscribed',confirmed_at=NOW(),confirmation_token=NULL,unsubscribed_at=NULL WHERE confirmation_token=$1 RETURNING locale`,[supplied]);
+    if(!result.rowCount) return response.status(400).send("Invalid or expired confirmation link");
+    const es=result.rows[0].locale==="es";
+    response.type("html").send(`<html><body style="background:#f6efe5;color:#162d29;font-family:Georgia,serif;padding:10vw"><h1>${es?"Suscripción confirmada.":"Anmeldung bestätigt."}</h1><p>${es?"Gracias. Ya formas parte del newsletter de Colectivo Gráfico Mallorca.":"Danke. Du erhältst ab jetzt den Newsletter von Colectivo Gráfico Mallorca."}</p><a href="${newsletterBaseUrl}">${es?"Volver a la tienda":"Zurück zum Shop"}</a></body></html>`);
+  } catch(error){next(error);}
+});
+async function unsubscribe(request,response,next) {
+  try {
+    const supplied=String((request.method==="POST"?request.body?.token:request.query.token)||"");
+    const result=await query(`UPDATE newsletter_subscribers SET status='unsubscribed',unsubscribed_at=NOW() WHERE unsubscribe_token=$1 RETURNING locale`,[supplied]);
+    if(!result.rowCount) return response.status(400).send("Invalid unsubscribe link");
+    if(request.method==="POST") return response.status(204).end();
+    const es=result.rows[0].locale==="es";
+    response.type("html").send(`<html><body style="background:#f6efe5;color:#162d29;font-family:Georgia,serif;padding:10vw"><h1>${es?"Suscripción cancelada.":"Newsletter abbestellt."}</h1><a href="${newsletterBaseUrl}">${es?"Volver a la tienda":"Zurück zum Shop"}</a></body></html>`);
+  } catch(error){next(error);}
+}
+app.get("/api/public/newsletter/unsubscribe",unsubscribe);
+app.post("/api/public/newsletter/unsubscribe",unsubscribe);
+
 
 app.post("/api/public/payment-intent", async (request, response, next) => {
   if (!stripe) return response.status(503).json({ error: "Stripe is not configured" });
@@ -170,6 +239,97 @@ app.post("/api/public/payment-intent", async (request, response, next) => {
     response.status(201).json({ clientSecret: intent.client_secret, orderId });
   } catch (error) { next(error); }
 });
+
+// CGM NEWSLETTER CMS V1
+app.get("/api/cms/newsletter/subscribers", requireCms, async (_request,response,next) => {
+  try {
+    const result=await query("SELECT id,email,locale,status,consent_at,confirmed_at,unsubscribed_at FROM newsletter_subscribers ORDER BY consent_at DESC");
+    response.json({subscribers:result.rows});
+  } catch(error){next(error);}
+});
+app.get("/api/cms/newsletter/campaigns", requireCms, async (_request,response,next) => {
+  try {
+    const result=await query("SELECT * FROM newsletter_campaigns ORDER BY created_at DESC LIMIT 100");
+    response.json({campaigns:result.rows});
+  } catch(error){next(error);}
+});
+function campaignValues(body={}) {
+  return [
+    String(body.subjectDe||"").slice(0,180), String(body.subjectEs||"").slice(0,180),
+    String(body.preheaderDe||"").slice(0,220), String(body.preheaderEs||"").slice(0,220),
+    String(body.headingDe||"").slice(0,180), String(body.headingEs||"").slice(0,180),
+    String(body.bodyDe||"").slice(0,20000), String(body.bodyEs||"").slice(0,20000),
+    String(body.ctaLabelDe||"").slice(0,80), String(body.ctaLabelEs||"").slice(0,80),
+    String(body.ctaUrl||"").slice(0,1000)
+  ];
+}
+app.post("/api/cms/newsletter/campaigns", requireCms, async (request,response,next) => {
+  try {
+    const values=campaignValues(request.body);
+    if(!values[0]||!values[1]||!values[6]||!values[7]) return response.status(400).json({error:"Betreff und Text in DE/ES sind erforderlich"});
+    const id=crypto.randomUUID();
+    const result=await query(`INSERT INTO newsletter_campaigns(id,subject_de,subject_es,preheader_de,preheader_es,heading_de,heading_es,body_de,body_es,cta_label_de,cta_label_es,cta_url)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,[id,...values]);
+    response.status(201).json({campaign:result.rows[0]});
+  } catch(error){next(error);}
+});
+app.patch("/api/cms/newsletter/campaigns/:id", requireCms, async (request,response,next) => {
+  try {
+    const values=campaignValues(request.body);
+    if(!values[0]||!values[1]||!values[6]||!values[7]) return response.status(400).json({error:"Betreff und Text in DE/ES sind erforderlich"});
+    const result=await query(`UPDATE newsletter_campaigns SET subject_de=$1,subject_es=$2,preheader_de=$3,preheader_es=$4,heading_de=$5,heading_es=$6,body_de=$7,body_es=$8,cta_label_de=$9,cta_label_es=$10,cta_url=$11,updated_at=NOW()
+      WHERE id=$12 AND status IN ('draft','failed') RETURNING *`,[...values,request.params.id]);
+    if(!result.rowCount) return response.status(409).json({error:"Dieser Newsletter kann nicht mehr bearbeitet werden"});
+    response.json({campaign:result.rows[0]});
+  } catch(error){next(error);}
+});
+app.post("/api/cms/newsletter/campaigns/:id/test", requireCms, async (request,response,next) => {
+  try {
+    const email=String(request.body?.email||"").trim().toLowerCase();
+    const locale=request.body?.locale==="es"?"es":"de";
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({error:"Ungültige Testadresse"});
+    const campaign=(await query("SELECT * FROM newsletter_campaigns WHERE id=$1",[request.params.id])).rows[0];
+    if(!campaign) return response.status(404).json({error:"Newsletter nicht gefunden"});
+    const mail=campaignMail(campaign,locale,`${newsletterBaseUrl}/`);
+    await resend("/emails",{from:newsletterFrom,to:[email],subject:`[TEST] ${mail.subject}`,html:mail.html,text:mail.text,tags:[{name:"category",value:"newsletter_test"}]});
+    response.json({sent:true});
+  } catch(error){next(error);}
+});
+app.post("/api/cms/newsletter/campaigns/:id/send", requireCms, async (request,response,next) => {
+  try {
+    const campaign=(await query("SELECT * FROM newsletter_campaigns WHERE id=$1",[request.params.id])).rows[0];
+    if(!campaign) return response.status(404).json({error:"Newsletter nicht gefunden"});
+    if(campaign.status==="sent") return response.status(409).json({error:"Newsletter wurde bereits versendet"});
+    await query("UPDATE newsletter_campaigns SET status='sending',recipient_count=0,failed_count=0,updated_at=NOW() WHERE id=$1",[campaign.id]);
+    const subscribers=(await query("SELECT id,email,locale,unsubscribe_token FROM newsletter_subscribers WHERE status='subscribed' ORDER BY id")).rows;
+    let sent=0,failed=0;
+    for(let offset=0;offset<subscribers.length;offset+=100) {
+      const chunk=subscribers.slice(offset,offset+100), payload=[];
+      for(const subscriber of chunk) {
+        let unsubscribeToken=subscriber.unsubscribe_token;
+        if(!unsubscribeToken) {
+          unsubscribeToken=token();
+          await query("UPDATE newsletter_subscribers SET unsubscribe_token=$1 WHERE id=$2",[unsubscribeToken,subscriber.id]);
+        }
+        const unsubscribeUrl=`${newsletterBaseUrl}/api/newsletter/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
+        const mail=campaignMail(campaign,subscriber.locale,unsubscribeUrl);
+        payload.push({from:newsletterFrom,to:[subscriber.email],subject:mail.subject,html:mail.html,text:mail.text,headers:{"List-Unsubscribe":`<${unsubscribeUrl}>`},tags:[{name:"category",value:"newsletter"}]});
+      }
+      try {
+        await resend("/emails/batch",payload,`newsletter/${campaign.id}/${offset}`);
+        sent+=chunk.length;
+      } catch(error) {
+        console.error("Newsletter batch failed",error);
+        failed+=chunk.length;
+      }
+      await query("UPDATE newsletter_campaigns SET recipient_count=$1,failed_count=$2,updated_at=NOW() WHERE id=$3",[sent,failed,campaign.id]);
+    }
+    const status=failed?"failed":"sent";
+    await query("UPDATE newsletter_campaigns SET status=$1,recipient_count=$2,failed_count=$3,sent_at=CASE WHEN $1='sent' THEN NOW() ELSE sent_at END,updated_at=NOW() WHERE id=$4",[status,sent,failed,campaign.id]);
+    response.json({sent,failed,status});
+  } catch(error){next(error);}
+});
+
 
 app.get("/api/cms/orders", requireCms, async (request, response, next) => {
   try {

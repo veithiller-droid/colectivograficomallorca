@@ -1,5 +1,6 @@
 "use client";
 
+import NewsletterSignup from "./components/newsletter-signup";
 import Link from "next/link";
 import ParallaxGallery from "./components/parallax-gallery";
 import NewArrivals from "./components/new-arrivals";
@@ -16,7 +17,7 @@ export default function Home() {
     <NewArrivals />
     <section id="colectivo" className="manifesto shell"><p className="eyebrow">{t.home.whoEyebrow}</p><p className="statement">{t.home.whoTitle}</p><div className="manifesto-foot"><p>{t.home.whoText}</p><Link href="/who-we-are">{t.home.whoLink} →</Link></div></section>
     <section id="que-hacemos" className="what-we-do"><div className="shell"><p className="eyebrow">{t.home.whatEyebrow}</p><div className="what-grid"><h2>{t.home.whatTitle}</h2><div><p>{t.home.whatText1}</p><p>{t.home.whatText2}</p><Link className="text-link" href="/what-we-do">{t.nav.what} →</Link></div></div></div></section>
-    <section id="newsletter" className="newsletter"><div className="shell newsletter-inner"><div><p className="eyebrow">{t.home.newsletterEyebrow}</p><h2>{t.home.newsletterTitle}</h2></div><form><label htmlFor="email">{t.home.newsletterLabel}</label><div><input id="email" name="email" type="email" autoComplete="email" placeholder={t.home.newsletterPlaceholder} required/><button type="submit">{t.home.newsletterButton} →</button></div><small>{t.home.newsletterSmall}</small></form></div></section>
+    <section id="newsletter" className="newsletter"><div className="shell newsletter-inner"><div><p className="eyebrow">{t.home.newsletterEyebrow}</p><h2>{t.home.newsletterTitle}</h2></div><NewsletterSignup /></div></section>
     <footer className="shell"><div className="brand"><span>COLECTIVO</span><span>GRÁFICO</span><span>MALLORCA</span></div><p><Link href="/privacy">{t.footer.privacy}</Link> · <Link href="/legal">{t.footer.legal}</Link></p><p>Artà · Mallorca · © 2026</p></footer>
   </main>;
 }
