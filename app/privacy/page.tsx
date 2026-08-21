@@ -190,7 +190,7 @@ export default function PrivacyPage() {
   return (
     <main>
       <SiteHeader />
-      <section className="faq-page shell">
+      <section className="faq-page privacy-page shell">
         <div className="faq-intro">
           <p className="eyebrow">{page.eyebrow}</p>
           <h1>{page.title}</h1>

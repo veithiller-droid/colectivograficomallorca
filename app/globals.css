@@ -121,3 +121,10 @@
   .faq-item{grid-template-columns:1fr;gap:12px;padding:23px 0}
   .faq-item p{font-size:16px}
 }
+
+/* CGM legal layout update v1 */
+.privacy-page .faq-intro h1{font-size:clamp(58px,8vw,118px);line-height:.84;overflow-wrap:anywhere;max-width:900px}
+.returns-page .faq-intro h1{font-size:clamp(60px,8.5vw,124px);line-height:.86;max-width:1000px}
+.returns-item{grid-template-columns:minmax(130px,.55fr) minmax(0,1.45fr)}
+.returns-copy p{font:17px/1.62 Georgia,serif;margin:0;max-width:720px}.returns-copy p+p{margin-top:18px}
+@media(max-width:800px){.privacy-page .faq-intro h1,.returns-page .faq-intro h1{font-size:clamp(48px,13vw,76px);line-height:.9}.returns-item{grid-template-columns:1fr}}
