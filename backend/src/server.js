@@ -116,8 +116,8 @@ function orderConfirmationMail(order, items) {
     : "Wir haben deine Zahlung erhalten und deine Bestellung wird jetzt bearbeitet. Wir bereiten alles sorgfältig in Artà vor.";
 
   const follow = es
-    ? "Cuando tu pedido esté listo para el envío, nos pondremos en contacto contigo si fuera necesario."
-    : "Sobald deine Bestellung versandbereit ist, melden wir uns bei Bedarf noch einmal bei dir.";
+    ? "En cuanto hayamos enviado tu pedido, recibirás una confirmación de envío por correo electrónico."
+    : "Sobald deine Bestellung versendet wurde, erhältst du eine Versandbestätigung per E-Mail.";
 
   const shopLabel = es ? "Volver a la tienda" : "Zurück zum Shop";
   const orderLabel = es ? "Pedido" : "Bestellung";
@@ -220,6 +220,91 @@ function shippingConfirmationMail(order) {
   };
 }
 
+
+// CGM ORDER NOTIFICATION HELPER V1
+function orderNotificationMail(order, items) {
+  const money = cents => new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR"
+  }).format(Number(cents || 0) / 100);
+
+  const orderNo = String(order.id || "").slice(0, 8).toUpperCase();
+  const address = order.shipping_address || {};
+  const addressLines = [
+    address.line1,
+    address.line2,
+    [address.postal_code, address.city].filter(Boolean).join(" "),
+    address.state,
+    address.country
+  ].filter(Boolean);
+
+  const itemLines = items.map(item => {
+    const meta = [item.format, item.frame_id].filter(Boolean).join(" · ");
+    return `${item.quantity}× ${item.product_title}${meta ? ` · ${meta}` : ""} — ${money(item.unit_price_cents * item.quantity)}`;
+  }).join("\n");
+
+  const subtotal = Number(order.subtotal_cents || (Number(order.total_cents || 0) - Number(order.shipping_cents || 0)));
+  const shipping = Number(order.shipping_cents || 0);
+  const subject = `Neue Bestellung · ${orderNo} · ${money(order.total_cents)}`;
+
+  const text = `Neue Bestellung
+
+Bestellung: ${orderNo}
+Kunde: ${order.customer_name || "–"}
+E-Mail: ${order.customer_email || "–"}
+Telefon: ${order.customer_phone || "–"}
+
+Artikel:
+${itemLines || "–"}
+
+Zwischensumme: ${money(subtotal)}
+Versand: ${shipping === 0 ? "Kostenlos" : money(shipping)}
+Gesamt: ${money(order.total_cents)}
+
+Lieferadresse:
+${addressLines.join("\n") || "–"}
+
+Sprache: ${String(order.locale || "de").toUpperCase()}`;
+
+  const rows = items.map(item => {
+    const meta = [item.format, item.frame_id].filter(Boolean).join(" · ");
+    return `<tr>
+      <td style="padding:10px 0;border-bottom:1px solid #162d2925">
+        <strong>${htmlEscape(item.product_title)}</strong>
+        <div style="font-size:11px;opacity:.65;margin-top:4px">${htmlEscape(meta)} · ${item.quantity}×</div>
+      </td>
+      <td style="padding:10px 0;border-bottom:1px solid #162d2925;text-align:right">
+        ${money(item.unit_price_cents * item.quantity)}
+      </td>
+    </tr>`;
+  }).join("");
+
+  const html = `<!doctype html><html><body style="margin:0;background:#f6efe5;color:#162d29">
+    <div style="max-width:680px;margin:auto;padding:48px 28px">
+      <div style="font:900 13px/.85 Arial,sans-serif">COLECTIVO<br>GRÁFICO<br>MALLORCA</div>
+      <h1 style="font:400 44px/.95 Georgia,serif;letter-spacing:-.04em;margin:46px 0 28px">Neue Bestellung.</h1>
+      <div style="font:14px/1.6 Arial,sans-serif;margin-bottom:28px">
+        <strong>Bestellung ${orderNo}</strong><br>
+        ${htmlEscape(order.customer_name || "–")}<br>
+        ${htmlEscape(order.customer_email || "–")}
+        ${order.customer_phone ? `<br>${htmlEscape(order.customer_phone)}` : ""}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font:13px Arial,sans-serif">${rows}</table>
+      <div style="padding:18px 0;font:13px Arial,sans-serif">
+        <div style="display:flex;justify-content:space-between;margin-bottom:7px"><span>Zwischensumme</span><strong>${money(subtotal)}</strong></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:7px"><span>Versand</span><strong>${shipping === 0 ? "Kostenlos" : money(shipping)}</strong></div>
+        <div style="display:flex;justify-content:space-between;border-top:1px solid #162d2940;padding-top:12px;margin-top:12px;font-size:18px"><span>Gesamt</span><strong>${money(order.total_cents)}</strong></div>
+      </div>
+      <div style="border-top:1px solid #162d2940;padding-top:20px;margin-top:10px;font:13px/1.6 Arial,sans-serif">
+        <strong>Lieferadresse</strong><br>
+        ${addressLines.map(htmlEscape).join("<br>") || "–"}
+      </div>
+    </div>
+  </body></html>`;
+
+  return { subject, text, html };
+}
+
 function requireCms(request, response, next) {
   const expected = process.env.CMS_API_TOKEN;
   const supplied = request.headers.authorization?.replace(/^Bearer\s+/i, "");
@@ -270,6 +355,56 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
             "UPDATE orders SET confirmation_email_error=$2,updated_at=NOW() WHERE id=$1",
             [paidOrder.id, String(mailError.message || "Unknown email error").slice(0,2000)]
           );
+        }
+      }
+
+
+      // CGM SEND ORDER NOTIFICATION V1
+      const notifyEmail = String(process.env.ORDER_NOTIFICATION_EMAIL || "").trim();
+      if (notifyEmail) {
+        const notifyOrder = (await query(
+          "SELECT * FROM orders WHERE stripe_payment_intent_id=$1",
+          [intent.id]
+        )).rows[0];
+
+        if (notifyOrder && !notifyOrder.notification_email_sent_at) {
+          const notifyItems = (await query(
+            "SELECT product_title,format,frame_id,quantity,unit_price_cents FROM order_items WHERE order_id=$1 ORDER BY id",
+            [notifyOrder.id]
+          )).rows;
+
+          const notification = orderNotificationMail(notifyOrder, notifyItems);
+
+          try {
+            const sentMail = await resend("/emails", {
+              from: newsletterFrom,
+              to: [notifyEmail],
+              subject: notification.subject,
+              html: notification.html,
+              text: notification.text,
+              tags: [{ name: "category", value: "order_notification" }]
+            }, `order-notification/${notifyOrder.id}`);
+
+            await query(
+              `UPDATE orders
+               SET notification_email_sent_at=NOW(),
+                   notification_email_resend_id=$2,
+                   notification_email_error=NULL,
+                   updated_at=NOW()
+               WHERE id=$1`,
+              [notifyOrder.id, sentMail?.id || null]
+            );
+          } catch (mailError) {
+            console.error("Order notification email failed", {
+              orderId: notifyOrder.id,
+              error: mailError.message
+            });
+
+            await query(
+              "UPDATE orders SET notification_email_error=$2,updated_at=NOW() WHERE id=$1",
+              [notifyOrder.id, String(mailError.message || "Unknown email error").slice(0,2000)]
+            );
+          }
         }
       }
 
