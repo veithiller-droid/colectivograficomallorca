@@ -193,7 +193,17 @@ export default function PrivacyPage() {
       <section className="faq-page privacy-page shell">
         <div className="faq-intro">
           <p className="eyebrow">{page.eyebrow}</p>
-          <h1>{page.title}</h1>
+          <h1>
+            {language === "de" ? (
+              <>
+                Datenschutz
+                <br />
+                erklärung
+              </>
+            ) : (
+              page.title
+            )}
+        </h1>
           <p>{page.intro}</p>
         </div>
 
