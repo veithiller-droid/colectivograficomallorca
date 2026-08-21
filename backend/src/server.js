@@ -122,6 +122,9 @@ function orderConfirmationMail(order, items) {
   const shopLabel = es ? "Volver a la tienda" : "Zurück zum Shop";
   const orderLabel = es ? "Pedido" : "Bestellung";
   const totalLabel = es ? "Total" : "Gesamtsumme";
+  const subtotalLabel = es ? "Subtotal" : "Zwischensumme";
+  const shippingLabel = es ? "Envío" : "Versand";
+  const shippingValue = Number(order.shipping_cents || 0) === 0 ? (es ? "Gratis" : "Kostenlos") : money(order.shipping_cents);
 
   return {
     subject,
@@ -150,7 +153,7 @@ function orderConfirmationMail(order, items) {
       ${rows}
     </table>
 
-    <div style="padding:20px 0 34px;text-align:right">
+    <div style="padding:18px 0;border-bottom:1px solid #162d2925;font:13px Arial,sans-serif"><div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:8px"><span>${subtotalLabel}</span><strong>${money(order.subtotal_cents || (order.total_cents - Number(order.shipping_cents || 0)))}</strong></div><div style="display:flex;justify-content:space-between;gap:20px"><span>${shippingLabel}</span><strong>${shippingValue}</strong></div></div><div style="padding:20px 0 34px;text-align:right">
       <span style="font:11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.1em">${totalLabel}</span>
       <strong style="display:block;margin-top:6px;font:30px Georgia,serif">
         ${money(order.total_cents)}
@@ -184,9 +187,36 @@ ${items.map(item =>
   `${item.quantity}× ${item.product_title} — ${money(item.unit_price_cents * item.quantity)}`
 ).join("\n")}
 
-${totalLabel}: ${money(order.total_cents)}
+${subtotalLabel}: ${money(order.subtotal_cents || (order.total_cents - Number(order.shipping_cents || 0)))}\n${shippingLabel}: ${shippingValue}\n${totalLabel}: ${money(order.total_cents)}
 
 ${shopLabel}: ${newsletterBaseUrl}/shop`
+  };
+}
+
+// CGM SHIPPING HELPERS V1
+const freeShippingThresholdCents = 8000;
+const europeanShippingCountries = new Set(["DE","FR","AT","BE","NL","IT","PT"]);
+function shippingCostCents(subtotalCents, country) {
+  if (subtotalCents >= freeShippingThresholdCents) return 0;
+  if (country === "ES") return 695;
+  if (europeanShippingCountries.has(country)) return 1295;
+  return null;
+}
+
+function shippingConfirmationMail(order) {
+  const es = order.locale === "es";
+  const orderNo = String(order.id || "").slice(0,8).toUpperCase();
+  const subject = es ? `Tu pedido ha sido enviado · ${orderNo}` : `Deine Bestellung wurde versendet · ${orderNo}`;
+  const heading = es ? "Tu pedido está en camino." : "Deine Bestellung ist unterwegs.";
+  const text = es
+    ? "Hemos enviado tu pedido. Muchas gracias por tu compra y un saludo desde Artà."
+    : "Wir haben deine Bestellung versendet. Vielen Dank für deinen Einkauf und viele Grüße aus Artà.";
+  const button = es ? "Volver a la tienda" : "Zurück zum Shop";
+
+  return {
+    subject,
+    html:`<!doctype html><html><body style="margin:0;background:#f6efe5;color:#162d29"><div style="max-width:680px;margin:auto;padding:55px 28px"><div style="font:900 13px/.85 Arial,sans-serif">COLECTIVO<br>GRÁFICO<br>MALLORCA</div><h1 style="font:400 50px/.95 Georgia,serif;letter-spacing:-.04em;margin:55px 0 28px">${heading}</h1><p style="font:17px/1.65 Georgia,serif;margin:0 0 32px">${text}</p><div style="border-top:1px solid #162d2940;border-bottom:1px solid #162d2940;padding:18px 0;margin-bottom:34px"><span style="font:10px Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase">${es?"Pedido":"Bestellung"}</span><strong style="float:right;font:18px Georgia,serif">${orderNo}</strong></div><p style="margin:0 0 40px"><a href="${newsletterBaseUrl}/shop" style="display:inline-block;background:#c85f46;color:#fff;text-decoration:none;padding:14px 20px;font:700 12px Arial,sans-serif">${button}</a></p><div style="border-top:1px solid #162d2940;padding-top:20px;font:11px/1.6 Arial,sans-serif">Colectivo Gráfico Mallorca · Artà · Mallorca<br>info@colectivograficomallorca.com</div></div></body></html>`,
+    text:`${heading}\n\n${text}\n\n${es?"Pedido":"Bestellung"}: ${orderNo}\n\n${button}: ${newsletterBaseUrl}/shop`
   };
 }
 
@@ -216,39 +246,30 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
         shipping?.phone || billing?.phone || null, shipping?.address ? JSON.stringify(shipping.address) : null,
         intent.amount_received || intent.amount, intent.id]);
 
-      // CGM SEND ORDER CONFIRMATION V1
-      const paidOrder = (await query(
-        "SELECT * FROM orders WHERE stripe_payment_intent_id=$1",
-        [intent.id]
-      )).rows[0];
-
+      // CGM SEND ORDER CONFIRMATION V2
+      const paidOrder = (await query("SELECT * FROM orders WHERE stripe_payment_intent_id=$1", [intent.id])).rows[0];
       if (paidOrder?.customer_email && !paidOrder.confirmation_email_sent_at) {
-        const orderItems = (await query(
-          "SELECT product_title,format,frame_id,quantity,unit_price_cents FROM order_items WHERE order_id=$1 ORDER BY id",
-          [paidOrder.id]
-        )).rows;
-
+        const orderItems = (await query("SELECT product_title,format,frame_id,quantity,unit_price_cents FROM order_items WHERE order_id=$1 ORDER BY id", [paidOrder.id])).rows;
         const mail = orderConfirmationMail(paidOrder, orderItems);
-
         try {
-          await resend("/emails", {
+          const sentMail = await resend("/emails", {
             from: newsletterFrom,
             to: [paidOrder.customer_email],
             subject: mail.subject,
             html: mail.html,
             text: mail.text,
-            tags: [{ name: "category", value: "order_confirmation" }]
+            tags: [{ name:"category", value:"order_confirmation" }]
           }, `order-confirmation/${paidOrder.id}`);
-
           await query(
-            "UPDATE orders SET confirmation_email_sent_at=NOW(),updated_at=NOW() WHERE id=$1 AND confirmation_email_sent_at IS NULL",
-            [paidOrder.id]
+            `UPDATE orders SET confirmation_email_sent_at=NOW(),confirmation_email_resend_id=$2,confirmation_email_error=NULL,updated_at=NOW() WHERE id=$1`,
+            [paidOrder.id, sentMail?.id || null]
           );
         } catch (mailError) {
-          console.error("Order confirmation email failed", {
-            orderId: paidOrder.id,
-            error: mailError.message
-          });
+          console.error("Order confirmation email failed", { orderId: paidOrder.id, error: mailError.message });
+          await query(
+            "UPDATE orders SET confirmation_email_error=$2,updated_at=NOW() WHERE id=$1",
+            [paidOrder.id, String(mailError.message || "Unknown email error").slice(0,2000)]
+          );
         }
       }
 
@@ -409,11 +430,46 @@ app.post("/api/public/payment-intent", async (request, response, next) => {
     const orderId = crypto.randomUUID();
     const total = verified.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0);
     const intent = await stripe.paymentIntents.create({ amount: total, currency: "eur", automatic_payment_methods: { enabled: true }, metadata: { orderId } });
-    await query(`INSERT INTO orders(id,stripe_payment_intent_id,status,currency,total_cents,locale) VALUES($1,$2,'pending','eur',$3,$4)`, [orderId, intent.id, total, locale]);
+    await query(`INSERT INTO orders(id,stripe_payment_intent_id,status,currency,total_cents,subtotal_cents,shipping_cents,locale) VALUES($1,$2,'pending','eur',$3,$3,0,$4)`, [orderId, intent.id, total, locale]);
     for (const item of verified) await query(`INSERT INTO order_items(order_id,product_id,product_title,format,frame_id,quantity,unit_price_cents) VALUES($1,$2,$3,$4,$5,$6,$7)`, [orderId, item.productId, item.title, item.format, item.frameId, item.quantity, item.unitPriceCents]);
     response.status(201).json({ clientSecret: intent.client_secret, orderId });
   } catch (error) { next(error); }
 });
+
+// CGM SHIPPING QUOTE V1
+app.post("/api/public/payment-intent/shipping", async (request, response, next) => {
+  if (!stripe) return response.status(503).json({ error: "Stripe is not configured" });
+  try {
+    const orderId = String(request.body?.orderId || "");
+    const country = String(request.body?.country || "").trim().toUpperCase();
+    if (!orderId || !country) return response.status(400).json({ error: "Order and country are required" });
+
+    const order = (await query("SELECT id,status,stripe_payment_intent_id FROM orders WHERE id=$1", [orderId])).rows[0];
+    if (!order) return response.status(404).json({ error: "Order not found" });
+    if (order.status !== "pending") return response.status(409).json({ error: "Order can no longer be changed" });
+
+    const subtotalResult = await query(
+      "SELECT COALESCE(SUM(unit_price_cents * quantity),0)::int AS subtotal_cents FROM order_items WHERE order_id=$1",
+      [orderId]
+    );
+    const subtotalCents = Number(subtotalResult.rows[0]?.subtotal_cents || 0);
+    const shippingCents = shippingCostCents(subtotalCents, country);
+    if (shippingCents === null) return response.status(400).json({ error: "Shipping country is not supported" });
+
+    const totalCents = subtotalCents + shippingCents;
+    await stripe.paymentIntents.update(order.stripe_payment_intent_id, {
+      amount: totalCents,
+      metadata: { orderId, shippingCountry: country, shippingCents: String(shippingCents) }
+    });
+    await query(
+      `UPDATE orders SET subtotal_cents=$1,shipping_cents=$2,shipping_country=$3,total_cents=$4,updated_at=NOW() WHERE id=$5`,
+      [subtotalCents, shippingCents, country, totalCents, orderId]
+    );
+
+    response.json({ subtotalCents, shippingCents, totalCents, country, freeShipping: shippingCents === 0 });
+  } catch (error) { next(error); }
+});
+
 
 // CGM NEWSLETTER CMS V1
 app.get("/api/cms/newsletter/subscribers", requireCms, async (_request,response,next) => {
@@ -644,13 +700,45 @@ app.patch("/api/cms/orders/:id", requireCms, async (request, response, next) => 
     const fulfillmentStatus = String(request.body?.fulfillmentStatus || "");
     if (!fulfillmentStatuses.includes(fulfillmentStatus)) return response.status(400).json({ error: "Invalid status" });
     const internalNote = String(request.body?.internalNote || "").slice(0, 4000);
-    const result = await query(`UPDATE orders SET fulfillment_status=$1,internal_note=$2,
+
+    const updated = await query(`UPDATE orders SET fulfillment_status=$1,internal_note=$2,
       shipped_at=CASE WHEN $1='shipped' AND shipped_at IS NULL THEN NOW() ELSE shipped_at END,updated_at=NOW()
       WHERE id=$3 RETURNING *`, [fulfillmentStatus, internalNote, request.params.id]);
-    if (!result.rowCount) return response.status(404).json({ error: "Order not found" });
-    response.json({ order: result.rows[0] });
+
+    if (!updated.rowCount) return response.status(404).json({ error: "Order not found" });
+    let order = updated.rows[0];
+
+    if (fulfillmentStatus === "shipped" && order.customer_email && !order.shipping_email_sent_at) {
+      const mail = shippingConfirmationMail(order);
+      try {
+        const sentMail = await resend("/emails", {
+          from: newsletterFrom,
+          to: [order.customer_email],
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+          tags: [{ name:"category", value:"shipping_confirmation" }]
+        }, `shipping-confirmation/${order.id}`);
+
+        const saved = await query(
+          `UPDATE orders SET shipping_email_sent_at=NOW(),shipping_email_resend_id=$2,shipping_email_error=NULL,updated_at=NOW() WHERE id=$1 RETURNING *`,
+          [order.id, sentMail?.id || null]
+        );
+        order = saved.rows[0];
+      } catch (mailError) {
+        console.error("Shipping confirmation email failed", { orderId: order.id, error: mailError.message });
+        const saved = await query(
+          `UPDATE orders SET shipping_email_error=$2,updated_at=NOW() WHERE id=$1 RETURNING *`,
+          [order.id, String(mailError.message || "Unknown email error").slice(0,2000)]
+        );
+        order = saved.rows[0];
+      }
+    }
+
+    response.json({ order });
   } catch (error) { next(error); }
 });
+
 
 app.use((error, _request, response, _next) => {
   console.error(error);

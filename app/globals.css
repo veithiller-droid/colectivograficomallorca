@@ -128,3 +128,6 @@
 .returns-item{grid-template-columns:minmax(130px,.55fr) minmax(0,1.45fr)}
 .returns-copy p{font:17px/1.62 Georgia,serif;margin:0;max-width:720px}.returns-copy p+p{margin-top:18px}
 @media(max-width:800px){.privacy-page .faq-intro h1,.returns-page .faq-intro h1{font-size:clamp(48px,13vw,76px);line-height:.9}.returns-item{grid-template-columns:1fr}}
+
+/* CGM CHECKOUT SHIPPING V1 */
+.checkout-costs{border-top:1px solid #162d2940;padding:18px 0 4px;display:grid;gap:10px}.checkout-costs>div{display:flex;justify-content:space-between;gap:20px;font-size:13px}.checkout-costs strong{font-weight:700;text-align:right}.checkout-costs small{display:block;font-size:10px;line-height:1.45;opacity:.62;margin:3px 0 10px}

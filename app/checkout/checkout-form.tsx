@@ -4,7 +4,9 @@ import { AddressElement, PaymentElement, useElements, useStripe } from "@stripe/
 import { useState } from "react";
 import { useLanguage } from "../components/language-provider";
 
-export default function CheckoutForm() {
+type ShippingQuote = { subtotalCents:number; shippingCents:number; totalCents:number; country:string; freeShipping:boolean };
+
+export default function CheckoutForm({ orderId, onShippingQuote }: { orderId:string; onShippingQuote:(quote:ShippingQuote) => void }) {
   const stripe = useStripe();
   const elements = useElements();
   const { language } = useLanguage();
@@ -12,7 +14,23 @@ export default function CheckoutForm() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [shippingCountry, setShippingCountry] = useState("");
   const de = language === "de";
+
+  async function updateShipping(country: string, refreshElements = true) {
+    if (!country || !orderId) throw new Error(de ? "Lieferland fehlt." : "Falta el país de entrega.");
+    const response = await fetch("/api/checkout/shipping", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ orderId, country }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || (de ? "Versandkosten konnten nicht berechnet werden." : "No se pudieron calcular los gastos de envío."));
+    setShippingCountry(country);
+    onShippingQuote(data);
+    if (refreshElements && elements) await elements.fetchUpdates();
+    return data as ShippingQuote;
+  }
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -23,6 +41,13 @@ export default function CheckoutForm() {
     const addressResult = await addressElement?.getValue();
     if (!addressResult?.complete) {
       setError(de ? "Bitte vervollständige deine Lieferadresse." : "Completa tu dirección de entrega.");
+      return;
+    }
+
+    try {
+      await updateShipping(addressResult.value.address.country, true);
+    } catch (shippingError) {
+      setError(shippingError instanceof Error ? shippingError.message : (de ? "Versandkosten konnten nicht berechnet werden." : "No se pudieron calcular los gastos de envío."));
       return;
     }
 
@@ -63,7 +88,7 @@ export default function CheckoutForm() {
       <label>{de ? "Name" : "Nombre"}<input required autoComplete="name" value={name} onChange={event => setName(event.target.value)} /></label>
       <label>E-Mail<input required type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></label>
     </div>
-    <div className="checkout-section"><span>02</span><h2>{de ? "Lieferadresse" : "Dirección de entrega"}</h2><AddressElement options={{ mode: "shipping", allowedCountries: ["ES", "DE", "FR", "AT", "BE", "NL", "IT", "PT"] }} /></div>
+    <div className="checkout-section"><span>02</span><h2>{de ? "Lieferadresse" : "Dirección de entrega"}</h2><AddressElement options={{ mode: "shipping", allowedCountries: ["ES", "DE", "FR", "AT", "BE", "NL", "IT", "PT"] }} onChange={event => { const country = event.value.address.country; if (country && country !== shippingCountry) updateShipping(country, true).catch(() => {}); }} /></div>
     <div className="checkout-section"><span>03</span><h2>{de ? "Zahlung" : "Pago"}</h2><PaymentElement options={{ layout: "accordion" }} /></div>
     {error && <p className="checkout-error">{error}</p>}
     <button type="submit" className="checkout-button" disabled={!stripe || loading}>{loading ? (de ? "Zahlung wird verarbeitet …" : "Procesando el pago…") : (de ? "Bestellung bezahlen" : "Pagar pedido")}</button>

@@ -104,3 +104,14 @@ CREATE INDEX IF NOT EXISTS newsletter_campaigns_created_idx ON newsletter_campai
 -- CGM ORDER CONFIRMATION MAIL V1
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT 'de';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirmation_email_sent_at TIMESTAMPTZ;
+
+-- CGM SHIPPING + MAIL STATUS V1
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal_cents INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_cents INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_country TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirmation_email_resend_id TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirmation_email_error TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_email_sent_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_email_resend_id TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_email_error TEXT;
+UPDATE orders SET subtotal_cents=total_cents WHERE subtotal_cents=0;
