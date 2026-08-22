@@ -100,6 +100,12 @@ function card(item) {
         <textarea data-quote-description="${esc(item.id)}" rows="4" placeholder="z. B. Eichenrahmen natur, Passepartout 6 cm, entspiegeltes Glas">${esc(item.quote_description || "")}</textarea>
       </label>
 
+      <div class="framing-forward-row">
+        <button type="button" class="framing-forward-button" data-forward-request="${esc(item.id)}" ${item.forwarded_at ? "disabled" : ""}>
+          ${item.forwarded_at ? "An Art i Vases weitergeleitet" : "An Art i Vases weiterleiten"}
+        </button>
+      </div>
+
       <div class="framing-offer-row">
         <label>Endpreis inkl. MwSt.
           <div class="framing-price-input"><input data-quote-price="${esc(item.id)}" type="number" min="0" step="0.01" value="${item.quote_price_cents == null ? "" : (Number(item.quote_price_cents)/100).toFixed(2)}"><span>€</span></div>
@@ -111,9 +117,6 @@ function card(item) {
 
       <div class="framing-offer-buttons">
         <button type="button" class="quiet" data-save-offer="${esc(item.id)}">Angebot speichern</button>
-        <button type="button" class="framing-forward-button" data-forward-request="${esc(item.id)}" ${item.forwarded_at ? "disabled" : ""}>
-          ${item.forwarded_at ? "An Art i Vases weitergeleitet" : "An Art i Vases weiterleiten"}
-        </button>
       </div>
 
       ${item.forwarded_error ? `<p class="mail-error">${esc(item.forwarded_error)}</p>` : ""}
