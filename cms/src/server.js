@@ -76,6 +76,14 @@ app.patch("/api/framing-requests/:id", requireLogin, async (request,response) =>
   response.status(result.status).send(await result.text());
 });
 
+app.post("/api/framing-requests/:id/forward", requireLogin, async (request,response) => {
+  const result = await backend(`/api/cms/framing-requests/${encodeURIComponent(request.params.id)}/forward`, {
+    method:"POST",
+    body:JSON.stringify({})
+  });
+  response.status(result.status).send(await result.text());
+});
+
 app.get("/api/framing-requests/:requestId/images/:imageId", requireLogin, async (request,response) => {
   const result = await fetch(`${backendUrl}/api/cms/framing-requests/${encodeURIComponent(request.params.requestId)}/images/${encodeURIComponent(request.params.imageId)}`, {
     headers:{authorization:`Bearer ${process.env.CMS_API_TOKEN}`}

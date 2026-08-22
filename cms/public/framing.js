@@ -2,6 +2,7 @@ const statuses = {
   new: "Neu",
   processing: "In Bearbeitung",
   forwarded: "An Art i Vases weitergeleitet",
+  quote_ready: "Angebot erhalten",
   completed: "Erledigt"
 };
 
@@ -38,6 +39,14 @@ function render() {
 
   document.querySelectorAll("[data-request-status]").forEach(select => {
     select.onchange = () => updateStatus(select.dataset.requestStatus, select.value);
+  });
+
+  document.querySelectorAll("[data-save-offer]").forEach(button => {
+    button.onclick = () => saveOffer(button.dataset.saveOffer);
+  });
+
+  document.querySelectorAll("[data-forward-request]").forEach(button => {
+    button.onclick = () => forwardRequest(button.dataset.forwardRequest, button);
   });
 }
 
@@ -81,6 +90,36 @@ function card(item) {
       </section>
     </div>
 
+    <div class="framing-offer">
+      <div class="framing-offer-head">
+        <div><p class="eyebrow">ANGEBOT</p><h3>Individuelle Rahmung</h3></div>
+        ${item.forwarded_at ? `<span class="framing-forwarded">Weitergeleitet ${date(item.forwarded_at)}</span>` : ""}
+      </div>
+
+      <label>Angebotsbeschreibung
+        <textarea data-quote-description="${esc(item.id)}" rows="4" placeholder="z. B. Eichenrahmen natur, Passepartout 6 cm, entspiegeltes Glas">${esc(item.quote_description || "")}</textarea>
+      </label>
+
+      <div class="framing-offer-row">
+        <label>Endpreis inkl. MwSt.
+          <div class="framing-price-input"><input data-quote-price="${esc(item.id)}" type="number" min="0" step="0.01" value="${item.quote_price_cents == null ? "" : (Number(item.quote_price_cents)/100).toFixed(2)}"><span>€</span></div>
+        </label>
+        <label>Interne Notiz
+          <input data-internal-note="${esc(item.id)}" value="${esc(item.internal_note || "")}" placeholder="nur intern sichtbar">
+        </label>
+      </div>
+
+      <div class="framing-offer-buttons">
+        <button type="button" class="quiet" data-save-offer="${esc(item.id)}">Angebot speichern</button>
+        <button type="button" class="framing-forward-button" data-forward-request="${esc(item.id)}" ${item.forwarded_at ? "disabled" : ""}>
+          ${item.forwarded_at ? "An Art i Vases weitergeleitet" : "An Art i Vases weiterleiten"}
+        </button>
+      </div>
+
+      ${item.forwarded_error ? `<p class="mail-error">${esc(item.forwarded_error)}</p>` : ""}
+      ${item.forwarded_email ? `<small class="framing-forward-meta">${esc(item.forwarded_email)}${item.forwarded_resend_id ? ` · ${esc(item.forwarded_resend_id)}` : ""}</small>` : ""}
+    </div>
+
     <div class="framing-actions">
       <label>Status
         <select data-request-status="${esc(item.id)}">
@@ -102,6 +141,56 @@ async function updateStatus(id, status) {
     alert("Status konnte nicht gespeichert werden.");
     return;
   }
+  await load();
+}
+
+
+async function saveOffer(id) {
+  const description = document.querySelector(`[data-quote-description="${CSS.escape(id)}"]`)?.value || "";
+  const rawPrice = document.querySelector(`[data-quote-price="${CSS.escape(id)}"]`)?.value || "";
+  const internalNote = document.querySelector(`[data-internal-note="${CSS.escape(id)}"]`)?.value || "";
+  const quotePriceCents = rawPrice === "" ? null : Math.round(Number(rawPrice.replace(",", ".")) * 100);
+
+  if (rawPrice !== "" && (!Number.isFinite(quotePriceCents) || quotePriceCents < 0)) {
+    alert("Bitte einen gültigen Preis eingeben.");
+    return;
+  }
+
+  const payload = { quoteDescription: description, quotePriceCents, internalNote };
+  if (description && quotePriceCents !== null) payload.status = "quote_ready";
+
+  const response = await fetch(`/api/framing-requests/${encodeURIComponent(id)}`, {
+    method:"PATCH",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    alert("Das Angebot konnte nicht gespeichert werden.");
+    return;
+  }
+  await load();
+}
+
+async function forwardRequest(id, button) {
+  if (!confirm("Diese Rahmungsanfrage jetzt per E-Mail an Art i Vases weiterleiten?")) return;
+
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = "Wird weitergeleitet …";
+
+  const response = await fetch(`/api/framing-requests/${encodeURIComponent(id)}/forward`, { method:"POST" });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    alert(data.error === "FRAMING_FORWARD_EMAIL is not configured"
+      ? "In Railway fehlt noch FRAMING_FORWARD_EMAIL."
+      : "Die Anfrage konnte nicht weitergeleitet werden.");
+    button.disabled = false;
+    button.textContent = original;
+    return;
+  }
+
   await load();
 }
 

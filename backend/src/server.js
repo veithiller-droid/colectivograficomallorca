@@ -314,7 +314,7 @@ const framingUpload = multer({
     callback(null, ["image/jpeg","image/png","image/webp"].includes(file.mimetype))
 });
 
-const framingStatuses = ["new","processing","forwarded","completed"];
+const framingStatuses = ["new","processing","forwarded","quote_ready","completed"];
 
 const framingLabels = {
   de: {
@@ -332,6 +332,74 @@ const framingLabels = {
     glass: { normal:"Cristal normal", anti_reflective:"Cristal antirreflejos", unsure:"Aún no lo sé" }
   }
 };
+
+
+function framingForwardMail(item, images) {
+  const subject = `Rahmungsanfrage ${String(item.id).slice(0,8).toUpperCase()} · ${item.product_title} · ${item.format}`;
+  const imageNote = images.length
+    ? `${images.length} Referenzbild${images.length === 1 ? "" : "er"} im Anhang`
+    : "Keine Referenzbilder";
+
+  const text = `Hallo,
+
+wir möchten euch folgende individuelle Rahmungsanfrage von Colectivo Gráfico Mallorca weiterleiten.
+
+ANFRAGE
+${String(item.id).slice(0,8).toUpperCase()}
+
+PRINT
+${item.product_title}
+${item.artist_name}
+${({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[item.format] || item.format}
+
+KUNDE
+${item.customer_name}
+${item.customer_email}
+${item.customer_phone || "Kein Telefon angegeben"}
+
+GEWÜNSCHTE AUSFÜHRUNG
+Material: ${framingLabels.de.material[item.material] || item.material}
+Farbe / Oberfläche: ${framingLabels.de.color[item.frame_color] || item.frame_color}
+Passepartout: ${framingLabels.de.passepartout[item.passepartout] || item.passepartout}
+Passepartout-Breite: ${framingLabels.de.width[item.passepartout_width] || item.passepartout_width}
+Glas: ${framingLabels.de.glass[item.glass_type] || item.glass_type}
+
+WEITERE WÜNSCHE
+${item.message || "Keine weiteren Wünsche angegeben."}
+
+${imageNote}
+
+Bitte prüft die gewünschte Ausführung und schickt uns Preis und mögliche Umsetzung zurück.
+
+Vielen Dank
+Colectivo Gráfico Mallorca
+Artà · Mallorca`;
+
+  const html = `<!doctype html><html><body style="margin:0;background:#f6efe5;color:#162d29"><div style="max-width:680px;margin:auto;padding:48px 28px">
+  <div style="font:900 13px/.85 Arial,sans-serif">COLECTIVO<br>GRÁFICO<br>MALLORCA</div>
+  <h1 style="font:400 42px/.98 Georgia,serif;margin:45px 0 28px">Individuelle Rahmungsanfrage</h1>
+  <p style="font:15px/1.6 Arial,sans-serif">Hallo,<br><br>wir möchten euch folgende individuelle Rahmungsanfrage weiterleiten.</p>
+  <div style="border-top:1px solid #162d2940;border-bottom:1px solid #162d2940;padding:16px 0;margin:24px 0">
+    <strong style="font:22px Georgia,serif">${htmlEscape(item.product_title)}</strong><br>
+    <span style="font:12px Arial,sans-serif">${htmlEscape(item.artist_name)} · ${htmlEscape(({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[item.format] || item.format)}</span>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font:13px Arial,sans-serif">
+    <tr><td style="padding:8px 0;opacity:.6">Kunde</td><td style="padding:8px 0;text-align:right">${htmlEscape(item.customer_name)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">E-Mail</td><td style="padding:8px 0;text-align:right">${htmlEscape(item.customer_email)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Telefon</td><td style="padding:8px 0;text-align:right">${htmlEscape(item.customer_phone || "–")}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Material</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.material[item.material] || item.material)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Farbe / Oberfläche</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.color[item.frame_color] || item.frame_color)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Passepartout</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.passepartout[item.passepartout] || item.passepartout)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Passepartout-Breite</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.width[item.passepartout_width] || item.passepartout_width)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Glas</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.glass[item.glass_type] || item.glass_type)}</td></tr>
+  </table>
+  ${item.message ? `<div style="border-top:1px solid #162d2940;margin-top:22px;padding-top:18px"><strong style="font:11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em">Weitere Wünsche</strong><p style="font:14px/1.6 Arial,sans-serif">${htmlEscape(item.message).replace(/\n/g,"<br>")}</p></div>` : ""}
+  <p style="font:13px/1.6 Arial,sans-serif;margin-top:24px">${htmlEscape(imageNote)}.<br><br>Bitte prüft die gewünschte Ausführung und schickt uns Preis und mögliche Umsetzung zurück.</p>
+  <div style="border-top:1px solid #162d2940;margin-top:36px;padding-top:18px;font:11px/1.5 Arial,sans-serif">Colectivo Gráfico Mallorca · Artà · Mallorca</div>
+  </div></body></html>`;
+
+  return { subject, text, html };
+}
 
 function framingRequestConfirmationMail(item) {
   const es = item.locale === "es";
@@ -895,14 +963,83 @@ app.get("/api/cms/framing-requests", requireCms, async (_request,response,next) 
 
 app.patch("/api/cms/framing-requests/:id", requireCms, async (request,response,next) => {
   try {
-    const status = String(request.body?.status || "");
+    const current = (await query("SELECT * FROM framing_requests WHERE id=$1", [request.params.id])).rows[0];
+    if (!current) return response.status(404).json({error:"Request not found"});
+
+    const status = request.body?.status === undefined ? current.status : String(request.body.status || "");
     if (!framingStatuses.includes(status)) return response.status(400).json({error:"Invalid status"});
+
+    const quoteDescription = request.body?.quoteDescription === undefined
+      ? current.quote_description
+      : String(request.body.quoteDescription || "").trim().slice(0,5000) || null;
+
+    let quotePriceCents = current.quote_price_cents;
+    if (request.body?.quotePriceCents !== undefined) {
+      const parsed = Number(request.body.quotePriceCents);
+      quotePriceCents = Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
+    }
+
+    const internalNote = request.body?.internalNote === undefined
+      ? current.internal_note
+      : String(request.body.internalNote || "").trim().slice(0,5000) || null;
+
     const result = await query(
-      "UPDATE framing_requests SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING *",
-      [status,request.params.id]
+      `UPDATE framing_requests
+       SET status=$1,quote_description=$2,quote_price_cents=$3,internal_note=$4,updated_at=NOW()
+       WHERE id=$5 RETURNING *`,
+      [status,quoteDescription,quotePriceCents,internalNote,request.params.id]
     );
-    if (!result.rowCount) return response.status(404).json({error:"Request not found"});
+
     response.json({request:result.rows[0]});
+  } catch(error){ next(error); }
+});
+
+
+app.post("/api/cms/framing-requests/:id/forward", requireCms, async (request,response,next) => {
+  try {
+    const target = String(process.env.FRAMING_FORWARD_EMAIL || "").trim();
+    if (!target) return response.status(503).json({error:"FRAMING_FORWARD_EMAIL is not configured"});
+
+    const item = (await query("SELECT * FROM framing_requests WHERE id=$1", [request.params.id])).rows[0];
+    if (!item) return response.status(404).json({error:"Request not found"});
+
+    const images = (await query(
+      "SELECT id,image_data,mime_type,original_name FROM framing_request_images WHERE request_id=$1 ORDER BY sort_order,id",
+      [item.id]
+    )).rows;
+
+    const mail = framingForwardMail(item, images);
+    const attachments = images.map((image,index) => ({
+      filename: String(image.original_name || `referenz-${index+1}.webp`).replace(/\.[^.]+$/, "") + ".webp",
+      content: Buffer.from(image.image_data).toString("base64")
+    }));
+
+    try {
+      const sentMail = await resend("/emails", {
+        from: newsletterFrom,
+        to: [target],
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        ...(attachments.length ? {attachments} : {}),
+        tags: [{name:"category",value:"framing_forward"}]
+      }, `framing-forward/${item.id}`);
+
+      const saved = await query(
+        `UPDATE framing_requests
+         SET status='forwarded',forwarded_at=NOW(),forwarded_email=$2,forwarded_resend_id=$3,forwarded_error=NULL,updated_at=NOW()
+         WHERE id=$1 RETURNING *`,
+        [item.id,target,sentMail?.id || null]
+      );
+      response.json({request:saved.rows[0]});
+    } catch(mailError) {
+      console.error("Framing forward email failed", {requestId:item.id,error:mailError.message});
+      await query(
+        "UPDATE framing_requests SET forwarded_email=$2,forwarded_error=$3,updated_at=NOW() WHERE id=$1",
+        [item.id,target,String(mailError.message || "Unknown email error").slice(0,2000)]
+      );
+      response.status(502).json({error:"Forward email failed"});
+    }
   } catch(error){ next(error); }
 });
 

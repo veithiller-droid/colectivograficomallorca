@@ -161,3 +161,22 @@ CREATE TABLE IF NOT EXISTS framing_request_images (
 
 CREATE INDEX IF NOT EXISTS framing_requests_status_created_idx
   ON framing_requests(status, created_at DESC);
+
+
+-- CGM FRAMING OFFERS V1
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS quote_description TEXT;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS quote_price_cents INTEGER;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS internal_note TEXT;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS forwarded_at TIMESTAMPTZ;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS forwarded_email TEXT;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS forwarded_resend_id TEXT;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS forwarded_error TEXT;
+
+DO $$
+BEGIN
+  ALTER TABLE framing_requests DROP CONSTRAINT IF EXISTS framing_requests_status_check;
+  ALTER TABLE framing_requests ADD CONSTRAINT framing_requests_status_check
+    CHECK (status IN ('new','processing','forwarded','quote_ready','completed'));
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
