@@ -1081,11 +1081,33 @@ app.post("/api/cms/framing-requests/:id/forward", requireCms, async (request,res
       [item.id]
     )).rows;
 
+    const productImage = item.product_id
+      ? (await query(
+          `SELECT id,image_data,mime_type,original_name
+           FROM product_images
+           WHERE product_id=$1
+             AND image_data IS NOT NULL
+           ORDER BY CASE WHEN image_type='primary' THEN 0 ELSE 1 END, sort_order, id
+           LIMIT 1`,
+          [item.product_id]
+        )).rows[0] || null
+      : null;
+
     const mail = framingForwardMail(item, images);
-    const attachments = images.map((image,index) => ({
-      filename: String(image.original_name || `referenz-${index+1}.webp`).replace(/\.[^.]+$/, "") + ".webp",
-      content: Buffer.from(image.image_data).toString("base64")
-    }));
+
+    const attachments = [
+      ...(productImage ? [{
+        filename: `MOTIV-${String(item.product_title || "Print")
+          .replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g, "-")}.webp`,
+        content: Buffer.from(productImage.image_data).toString("base64")
+      }] : []),
+
+      ...images.map((image,index) => ({
+        filename: String(image.original_name || `referenz-${index+1}.webp`)
+          .replace(/\.[^.]+$/, "") + ".webp",
+        content: Buffer.from(image.image_data).toString("base64")
+      }))
+    ];
 
     try {
       const sentMail = await resend("/emails", {
