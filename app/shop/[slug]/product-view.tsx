@@ -102,6 +102,7 @@ function ProductViewContent({ product, previousProduct, nextProduct }: Omit<Prod
     <div className="product-info">
       <p className="eyebrow">{t.product.eyebrow}</p><h1>{product.title}</h1><p className="product-artist">{product.artist}</p>
       <p className="product-price">{totalPrice === null ? t.product.selectFormatPrice : <>{frame === "custom" && `${t.product.from} `}{totalPrice.toFixed(2).replace(".", ",")} €</>}</p>
+      {totalPrice !== null && <p className="vat-note">{language === "es" ? "IVA incluido" : "inkl. MwSt."}</p>}
       <p className="price-note">{format ? t.product.totalPrice : t.product.priceAfterSelection}</p>
       <p className="product-description">{t.product.description}</p>
       <fieldset className="format-picker"><legend>{t.product.format}</legend><div>{product.availableFormats.map(item => <button type="button" className={format === item ? "active" : ""} onClick={() => chooseFormat(item)} key={item}>{formatLabel(item, language)}</button>)}</div></fieldset>

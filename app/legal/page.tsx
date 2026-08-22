@@ -36,6 +36,7 @@ const content = {
         title: "Online-Handel",
         items: [
           ["Vertragsschluss", "Für Bestellungen über diesen Shop gelten zusätzlich die jeweils im Bestellprozess angezeigten Bedingungen sowie die Informationen zu Rückgabe und Widerruf."],
+          ["Preise und Mehrwertsteuer", "Alle im Shop angegebenen Preise verstehen sich inklusive der gesetzlichen Mehrwertsteuer. Versandkosten werden im Checkout gesondert ausgewiesen."],
           ["Kontakt", "Für Fragen zu Bestellungen oder rechtlichen Angaben erreichst du uns unter info@colectivograficomallorca.com."],
         ],
       },
@@ -73,6 +74,7 @@ const content = {
         title: "Comercio electrónico",
         items: [
           ["Contratación", "Los pedidos realizados a través de esta tienda se rigen además por las condiciones e informaciones sobre devoluciones y desistimiento mostradas durante el proceso de compra."],
+          ["Precios e IVA", "Todos los precios indicados en la tienda incluyen el IVA legal. Los gastos de envío se muestran por separado durante el proceso de compra."],
           ["Contacto", "Para consultas sobre pedidos o información legal puedes escribirnos a info@colectivograficomallorca.com."],
         ],
       },
