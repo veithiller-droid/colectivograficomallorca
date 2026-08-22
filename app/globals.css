@@ -320,3 +320,22 @@
 .vat-note{
   margin:10px 0 0;
 }
+
+/* CGM FRAMING OFFER PAGE V1 */
+.framing-offer-page{padding-top:70px;padding-bottom:90px}
+.framing-offer-title{max-width:760px;margin-bottom:45px}
+.framing-offer-title h1{font:clamp(42px,6vw,78px)/.92 Georgia,serif;letter-spacing:-.045em;margin:10px 0 18px}
+.framing-offer-layout{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:55px;align-items:start}
+.framing-offer-summary{border:1px solid #162d2935;padding:22px;background:#fffaf3}
+.framing-offer-summary>img{display:block;width:100%;max-height:480px;object-fit:contain;background:#eee4d7;margin-bottom:25px}
+.framing-offer-summary h2{font:32px/1 Georgia,serif;margin:7px 0}
+.framing-offer-artist{font-size:11px;opacity:.65;margin-bottom:24px}
+.framing-offer-description{border-top:1px solid #162d2935;border-bottom:1px solid #162d2935;padding:18px 0;margin:18px 0}
+.framing-offer-description span,.framing-offer-price span,.framing-offer-shipping span,.framing-offer-total span{font-size:9px;text-transform:uppercase;letter-spacing:.1em;opacity:.6}
+.framing-offer-description p{font:14px/1.6 Georgia,serif;white-space:pre-line}
+.framing-offer-price strong{display:block;font:36px Georgia,serif;margin-top:5px}
+.framing-offer-vat{font-size:9px;opacity:.55;margin:5px 0 20px}
+.framing-offer-shipping,.framing-offer-total{display:flex;justify-content:space-between;gap:20px;border-top:1px solid #162d2925;padding-top:14px;margin-top:14px}
+.framing-offer-total strong{font:24px Georgia,serif}
+.framing-offer-payment>h2{font:34px Georgia,serif;margin:8px 0 24px}
+@media(max-width:800px){.framing-offer-page{padding-top:35px}.framing-offer-layout{grid-template-columns:1fr;gap:35px}.framing-offer-title h1{font-size:46px}}

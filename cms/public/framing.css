@@ -48,3 +48,10 @@
   margin-top:14px;
   margin-bottom:20px;
 }
+
+/* CGM FRAMING CUSTOMER OFFER V1 */
+.framing-send-offer-button{border:0;background:var(--coral);color:#fff}
+.framing-send-offer-button:disabled{opacity:.55;cursor:default}
+.framing-offer-link{margin-top:14px;padding:12px;background:#162d290b}
+.framing-offer-link span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;margin-bottom:5px}
+.framing-offer-link a{font-size:11px;word-break:break-all;color:var(--ink)}

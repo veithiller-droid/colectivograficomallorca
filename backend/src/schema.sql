@@ -180,3 +180,16 @@ BEGIN
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
+
+-- CGM FRAMING PAYMENT V1
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS offer_token TEXT;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS offer_sent_at TIMESTAMPTZ;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS offer_email_resend_id TEXT;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS offer_email_error TEXT;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS order_id TEXT;
+ALTER TABLE framing_requests ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS framing_requests_offer_token_idx ON framing_requests(offer_token) WHERE offer_token IS NOT NULL;
+DO $$ BEGIN
+  ALTER TABLE framing_requests DROP CONSTRAINT IF EXISTS framing_requests_status_check;
+  ALTER TABLE framing_requests ADD CONSTRAINT framing_requests_status_check CHECK (status IN ('new','processing','forwarded','quote_ready','offer_sent','paid','completed'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

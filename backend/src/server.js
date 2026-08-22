@@ -69,7 +69,8 @@ function orderConfirmationMail(order, items) {
     "standard-black": es ? "marco estándar negro" : "Standardrahmen Schwarz",
     "aluminium-silver": es ? "aluminio plata con cristal" : "Aluminium Silber mit Echtglas",
     "aluminium-black": es ? "aluminio negro con cristal" : "Aluminium Schwarz mit Echtglas",
-    "aluminium-gold": es ? "aluminio oro con cristal" : "Aluminium Gold mit Echtglas"
+    "aluminium-gold": es ? "aluminio oro con cristal" : "Aluminium Gold mit Echtglas",
+    custom: es ? "enmarcación personalizada" : "individuelle Rahmung"
   };
 
   const formatNames = {
@@ -314,7 +315,7 @@ const framingUpload = multer({
     callback(null, ["image/jpeg","image/png","image/webp"].includes(file.mimetype))
 });
 
-const framingStatuses = ["new","processing","forwarded","quote_ready","completed"];
+const framingStatuses = ["new","processing","forwarded","quote_ready","offer_sent","paid","completed"];
 
 const framingLabels = {
   de: {
@@ -438,6 +439,35 @@ Artà · Mallorca`;
   return { subject, text, html };
 }
 
+function framingOfferMail(item, offerUrl) {
+  const es=item.locale==="es";
+  const formatLabel=({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[item.format]||item.format;
+  const money=new Intl.NumberFormat(es?"es-ES":"de-DE",{style:"currency",currency:"EUR"}).format(Number(item.quote_price_cents||0)/100);
+  const subject=es?`Tu oferta de enmarcación · ${item.product_title}`:`Dein Angebot für die individuelle Rahmung · ${item.product_title}`;
+  const heading=es?"Tu oferta personalizada está lista.":"Dein individuelles Angebot ist fertig.";
+  const intro=es?"Art i Vases ha revisado tu solicitud. Hemos preparado la siguiente oferta para ti.":"Art i Vases hat deine Anfrage geprüft. Wir haben daraus folgendes Angebot für dich erstellt.";
+  const cta=es?"Ver oferta y pagar":"Angebot ansehen & bezahlen";
+  const shipping=es?"Los gastos de envío se calculan según la dirección de entrega. A partir de 80 € el envío es gratuito.":"Die Versandkosten werden anhand der Lieferadresse berechnet. Ab 80 € Warenwert ist der Versand kostenlos.";
+  return {subject,text:`${heading}
+
+${intro}
+
+${item.product_title}
+${item.artist_name} · ${formatLabel}
+
+${item.quote_description}
+
+${es?"Precio de la oferta":"Angebotspreis"}: ${money}
+${es?"IVA incluido":"inkl. MwSt."}
+
+${shipping}
+
+${cta}: ${offerUrl}
+
+Colectivo Gráfico Mallorca
+Artà · Mallorca`,html:`<!doctype html><html><body style="margin:0;background:#f6efe5;color:#162d29"><div style="max-width:680px;margin:auto;padding:55px 28px"><div style="font:900 13px/.85 Arial,sans-serif">COLECTIVO<br>GRÁFICO<br>MALLORCA</div><h1 style="font:400 48px/.96 Georgia,serif;margin:55px 0 28px">${htmlEscape(heading)}</h1><p style="font:17px/1.65 Georgia,serif">${htmlEscape(intro)}</p><div style="border-top:1px solid #162d2940;border-bottom:1px solid #162d2940;padding:20px 0;margin:24px 0"><strong style="display:block;font:24px Georgia,serif">${htmlEscape(item.product_title)}</strong><span style="font:12px Arial,sans-serif">${htmlEscape(item.artist_name)} · ${htmlEscape(formatLabel)}</span></div><div style="font:14px/1.65 Arial,sans-serif">${htmlEscape(item.quote_description||"").replace(/\n/g,"<br>")}</div><div style="border-top:1px solid #162d2940;padding-top:18px;margin-top:24px"><strong style="display:block;font:34px Georgia,serif">${htmlEscape(money)}</strong><small>${es?"IVA incluido":"inkl. MwSt."}</small></div><p style="font:12px/1.55 Arial,sans-serif">${htmlEscape(shipping)}</p><p style="margin:30px 0"><a href="${htmlEscape(offerUrl)}" style="display:inline-block;background:#c85f46;color:#fff;text-decoration:none;padding:15px 20px;font:700 12px Arial,sans-serif">${htmlEscape(cta)}</a></p><div style="border-top:1px solid #162d2940;margin-top:45px;padding-top:20px;font:11px Arial,sans-serif">Colectivo Gráfico Mallorca · Artà · Mallorca</div></div></body></html>`};
+}
+
 function framingRequestConfirmationMail(item) {
   const es = item.locale === "es";
   const orderNo = String(item.id || "").slice(0,8).toUpperCase();
@@ -495,6 +525,7 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
 
       // CGM SEND ORDER CONFIRMATION V2
       const paidOrder = (await query("SELECT * FROM orders WHERE stripe_payment_intent_id=$1", [intent.id])).rows[0];
+      if (paidOrder) await query("UPDATE framing_requests SET status='paid',paid_at=COALESCE(paid_at,NOW()),updated_at=NOW() WHERE order_id=$1",[paidOrder.id]);
       if (paidOrder?.customer_email && !paidOrder.confirmation_email_sent_at) {
         const orderItems = (await query("SELECT product_title,format,frame_id,quantity,unit_price_cents FROM order_items WHERE order_id=$1 ORDER BY id", [paidOrder.id])).rows;
         const mail = orderConfirmationMail(paidOrder, orderItems);
@@ -768,6 +799,10 @@ app.post("/api/public/payment-intent/shipping", async (request, response, next) 
 });
 
 
+// CGM PUBLIC FRAMING OFFER PAYMENT V1
+app.get("/api/public/framing-offers/:token",async(request,response,next)=>{try{const item=(await query(`SELECT r.*,(SELECT path FROM product_images WHERE product_id=r.product_id AND image_type='primary' ORDER BY sort_order,id LIMIT 1) AS image FROM framing_requests r WHERE r.offer_token=$1 AND r.offer_sent_at IS NOT NULL`,[String(request.params.token||"")])).rows[0];if(!item)return response.status(404).json({error:"Offer not found"});response.set("Cache-Control","no-store");response.json({offer:{id:item.id,token:item.offer_token,locale:item.locale==="es"?"es":"de",productTitle:item.product_title,artistName:item.artist_name,format:item.format,formatLabel:({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[item.format]||item.format,image:item.image||null,description:item.quote_description||"",priceCents:Number(item.quote_price_cents||0),customerName:item.customer_name,customerEmail:item.customer_email,status:item.status,paid:Boolean(item.paid_at||item.status==="paid")}});}catch(error){next(error);}});
+app.post("/api/public/framing-offers/:token/payment-intent",async(request,response,next)=>{if(!stripe)return response.status(503).json({error:"Stripe is not configured"});const client=await pool.connect();try{const item=(await client.query("SELECT * FROM framing_requests WHERE offer_token=$1 AND offer_sent_at IS NOT NULL",[String(request.params.token||"")])).rows[0];if(!item)return response.status(404).json({error:"Offer not found"});if(item.paid_at||item.status==="paid")return response.status(409).json({error:"Offer already paid"});if(!item.quote_description||!Number(item.quote_price_cents))return response.status(409).json({error:"Offer is incomplete"});if(item.order_id){const existing=(await client.query("SELECT id,status,stripe_payment_intent_id FROM orders WHERE id=$1",[item.order_id])).rows[0];if(existing?.status==="pending"&&existing.stripe_payment_intent_id){const intent=await stripe.paymentIntents.retrieve(existing.stripe_payment_intent_id);if(intent?.client_secret)return response.json({clientSecret:intent.client_secret,orderId:existing.id,reused:true});}if(existing?.status==="paid"){await client.query("UPDATE framing_requests SET status='paid',paid_at=COALESCE(paid_at,NOW()),updated_at=NOW() WHERE id=$1",[item.id]);return response.status(409).json({error:"Offer already paid"});}}const orderId=crypto.randomUUID();const total=Number(item.quote_price_cents);const intent=await stripe.paymentIntents.create({amount:total,currency:"eur",automatic_payment_methods:{enabled:true},receipt_email:item.customer_email,metadata:{orderId,framingRequestId:item.id,orderType:"custom_framing"}});await client.query("BEGIN");await client.query(`INSERT INTO orders(id,stripe_payment_intent_id,status,currency,total_cents,subtotal_cents,shipping_cents,locale,customer_email,customer_name) VALUES($1,$2,'pending','eur',$3,$3,0,$4,$5,$6)`,[orderId,intent.id,total,item.locale==="es"?"es":"de",item.customer_email,item.customer_name]);await client.query(`INSERT INTO order_items(order_id,product_id,product_title,format,frame_id,quantity,unit_price_cents) VALUES($1,$2,$3,$4,'custom',1,$5)`,[orderId,item.product_id,`${item.product_title} · ${item.locale==="es"?"Enmarcación personalizada":"Individuelle Rahmung"}`,item.format,total]);await client.query("UPDATE framing_requests SET order_id=$2,updated_at=NOW() WHERE id=$1",[item.id,orderId]);await client.query("COMMIT");response.status(201).json({clientSecret:intent.client_secret,orderId});}catch(error){try{await client.query("ROLLBACK");}catch{}next(error);}finally{client.release();}});
+
 // CGM NEWSLETTER CMS V1
 app.get("/api/cms/newsletter/subscribers", requireCms, async (_request,response,next) => {
   try {
@@ -987,6 +1022,7 @@ app.get("/api/cms/framing-requests", requireCms, async (_request,response,next) 
     );
     const requests = result.rows.map(row => ({
       ...row,
+      offer_url: row.offer_token ? `${newsletterBaseUrl}/angebot/${row.offer_token}` : null,
       format_label: ({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[row.format] || row.format,
       material: framingLabels.de.material[row.material] || row.material,
       frame_color: framingLabels.de.color[row.frame_color] || row.frame_color,
@@ -1079,6 +1115,8 @@ app.post("/api/cms/framing-requests/:id/forward", requireCms, async (request,res
     }
   } catch(error){ next(error); }
 });
+
+app.post("/api/cms/framing-requests/:id/send-offer",requireCms,async(request,response,next)=>{try{const item=(await query("SELECT * FROM framing_requests WHERE id=$1",[request.params.id])).rows[0];if(!item)return response.status(404).json({error:"Request not found"});if(!item.quote_description||!Number(item.quote_price_cents))return response.status(409).json({error:"Quote description and price are required"});if(item.paid_at||item.status==="paid")return response.status(409).json({error:"Offer already paid"});const offerToken=item.offer_token||crypto.randomBytes(32).toString("hex");const offerUrl=`${newsletterBaseUrl}/angebot/${offerToken}`;const mail=framingOfferMail({...item,offer_token:offerToken},offerUrl);try{const sentMail=await resend("/emails",{from:newsletterFrom,to:[item.customer_email],subject:mail.subject,html:mail.html,text:mail.text,tags:[{name:"category",value:"framing_offer"}]},`framing-offer/${item.id}`);const saved=await query(`UPDATE framing_requests SET offer_token=$2,offer_sent_at=NOW(),offer_email_resend_id=$3,offer_email_error=NULL,status='offer_sent',updated_at=NOW() WHERE id=$1 RETURNING *`,[item.id,offerToken,sentMail?.id||null]);response.json({request:saved.rows[0],offerUrl});}catch(mailError){await query("UPDATE framing_requests SET offer_token=$2,offer_email_error=$3,updated_at=NOW() WHERE id=$1",[item.id,offerToken,String(mailError.message||"Unknown email error").slice(0,2000)]);response.status(502).json({error:"Offer email failed"});}}catch(error){next(error);}});
 
 app.get("/api/cms/framing-requests/:requestId/images/:imageId", requireCms, async (request,response,next) => {
   try {

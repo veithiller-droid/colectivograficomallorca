@@ -3,6 +3,8 @@ const statuses = {
   processing: "In Bearbeitung",
   forwarded: "An Art i Vases weitergeleitet",
   quote_ready: "Angebot erhalten",
+  offer_sent: "Angebot an Kunden gesendet",
+  paid: "Bezahlt",
   completed: "Erledigt"
 };
 
@@ -45,9 +47,8 @@ function render() {
     button.onclick = () => saveOffer(button.dataset.saveOffer);
   });
 
-  document.querySelectorAll("[data-forward-request]").forEach(button => {
-    button.onclick = () => forwardRequest(button.dataset.forwardRequest, button);
-  });
+  document.querySelectorAll("[data-forward-request]").forEach(button => { button.onclick = () => forwardRequest(button.dataset.forwardRequest, button); });
+  document.querySelectorAll("[data-send-offer]").forEach(button => { button.onclick = () => sendOffer(button.dataset.sendOffer, button); });
 }
 
 function card(item) {
@@ -117,7 +118,11 @@ function card(item) {
 
       <div class="framing-offer-buttons">
         <button type="button" class="quiet" data-save-offer="${esc(item.id)}">Angebot speichern</button>
+        <button type="button" class="framing-send-offer-button" data-send-offer="${esc(item.id)}" ${item.paid_at || item.status === "paid" ? "disabled" : ""}>${item.paid_at || item.status === "paid" ? "Bezahlt" : item.offer_sent_at ? "Angebot an Kunden gesendet" : "Angebot an Kunden senden"}</button>
       </div>
+      ${item.offer_url ? `<div class="framing-offer-link"><span>Persönlicher Angebotslink</span><a href="${esc(item.offer_url)}" target="_blank" rel="noopener">${esc(item.offer_url)}</a></div>` : ""}
+      ${item.offer_email_error ? `<p class="mail-error">${esc(item.offer_email_error)}</p>` : ""}
+      ${item.offer_sent_at ? `<small class="mail-ok">Angebot gesendet ${date(item.offer_sent_at)}</small>` : ""}
 
       ${item.forwarded_error ? `<p class="mail-error">${esc(item.forwarded_error)}</p>` : ""}
       ${item.forwarded_email ? `<small class="framing-forward-meta">${esc(item.forwarded_email)}${item.forwarded_resend_id ? ` · ${esc(item.forwarded_resend_id)}` : ""}</small>` : ""}
@@ -194,6 +199,21 @@ async function forwardRequest(id, button) {
     return;
   }
 
+  await load();
+}
+
+async function sendOffer(id, button) {
+  const description=document.querySelector(`[data-quote-description="${CSS.escape(id)}"]`)?.value||"";
+  const rawPrice=document.querySelector(`[data-quote-price="${CSS.escape(id)}"]`)?.value||"";
+  const internalNote=document.querySelector(`[data-internal-note="${CSS.escape(id)}"]`)?.value||"";
+  const quotePriceCents=rawPrice===""?null:Math.round(Number(rawPrice.replace(",","."))*100);
+  if(!description.trim()||quotePriceCents===null||!Number.isFinite(quotePriceCents)||quotePriceCents<=0){alert("Bitte zuerst Angebotsbeschreibung und Endpreis eintragen.");return;}
+  if(!confirm("Dieses individuelle Angebot jetzt an den Kunden senden?"))return;
+  button.disabled=true;button.textContent="Wird gesendet …";
+  const save=await fetch(`/api/framing-requests/${encodeURIComponent(id)}`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({quoteDescription:description,quotePriceCents,internalNote,status:"quote_ready"})});
+  if(!save.ok){alert("Das Angebot konnte nicht gespeichert werden.");button.disabled=false;return;}
+  const response=await fetch(`/api/framing-requests/${encodeURIComponent(id)}/send-offer`,{method:"POST"});
+  if(!response.ok){alert("Das Angebot konnte nicht an den Kunden gesendet werden.");button.disabled=false;return;}
   await load();
 }
 

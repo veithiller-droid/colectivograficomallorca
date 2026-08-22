@@ -6,16 +6,17 @@ import { useLanguage } from "../components/language-provider";
 
 type ShippingQuote = { subtotalCents:number; shippingCents:number; totalCents:number; country:string; freeShipping:boolean };
 
-export default function CheckoutForm({ orderId, onShippingQuote }: { orderId:string; onShippingQuote:(quote:ShippingQuote) => void }) {
+export default function CheckoutForm({ orderId, onShippingQuote, locale, initialName = "", initialEmail = "", returnUrl, submitLabel }: { orderId:string; onShippingQuote:(quote:ShippingQuote) => void; locale?:"de"|"es"; initialName?:string; initialEmail?:string; returnUrl?:string; submitLabel?:string }) {
   const stripe = useStripe();
   const elements = useElements();
   const { language } = useLanguage();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [shippingCountry, setShippingCountry] = useState("");
-  const de = language === "de";
+  const effectiveLanguage = locale || language;
+  const de = effectiveLanguage === "de";
 
   async function updateShipping(country: string, refreshElements = true) {
     if (!country || !orderId) throw new Error(de ? "Lieferland fehlt." : "Falta el país de entrega.");
@@ -61,7 +62,7 @@ export default function CheckoutForm({ orderId, onShippingQuote }: { orderId:str
     const result = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/success`,
+        return_url: returnUrl || `${window.location.origin}/checkout/success`,
         payment_method_data: { billing_details: { name, email } },
         shipping: {
           name: addressResult.value.name || name,
@@ -91,7 +92,7 @@ export default function CheckoutForm({ orderId, onShippingQuote }: { orderId:str
     <div className="checkout-section"><span>02</span><h2>{de ? "Lieferadresse" : "Dirección de entrega"}</h2><AddressElement options={{ mode: "shipping", allowedCountries: ["ES", "DE", "FR", "AT", "BE", "NL", "IT", "PT"] }} onChange={event => { const country = event.value.address.country; if (country && country !== shippingCountry) updateShipping(country, true).catch(() => {}); }} /></div>
     <div className="checkout-section"><span>03</span><h2>{de ? "Zahlung" : "Pago"}</h2><PaymentElement options={{ layout: "accordion" }} /></div>
     {error && <p className="checkout-error">{error}</p>}
-    <button type="submit" className="checkout-button" disabled={!stripe || loading}>{loading ? (de ? "Zahlung wird verarbeitet …" : "Procesando el pago…") : (de ? "Bestellung bezahlen" : "Pagar pedido")}</button>
+    <button type="submit" className="checkout-button" disabled={!stripe || loading}>{loading ? (de ? "Zahlung wird verarbeitet …" : "Procesando el pago…") : (submitLabel || (de ? "Bestellung bezahlen" : "Pagar pedido"))}</button>
     <p className="checkout-security">{de ? "Sichere und verschlüsselte Zahlungsabwicklung durch Stripe." : "Pago seguro y cifrado procesado por Stripe."}</p>
   </form>;
 }
