@@ -9,6 +9,9 @@ import SiteHeader from "../../components/site-header";
 import CheckoutForm from "../../checkout/checkout-form";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://creative-perfection-production-3c6e.up.railway.app";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const publicImage = (path:string) =>
+  path.startsWith("/api/public/images/") ? `${apiUrl}${path}` : `${basePath}${path}`;
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
 const money = (cents:number) => `${(cents / 100).toFixed(2).replace(".", ",")} €`;
 
@@ -56,7 +59,7 @@ export default function FramingOfferPage() {
     <div className="framing-offer-title"><p className="eyebrow">COLECTIVO GRÁFICO MALLORCA</p><h1>{de ? "Dein individuelles Angebot" : "Tu oferta personalizada"}</h1><p>{de ? "Individuelle Rahmung in Zusammenarbeit mit Art i Vases in Artà." : "Enmarcación personalizada en colaboración con Art i Vases en Artà."}</p></div>
     <div className="framing-offer-layout">
       <aside className="framing-offer-summary">
-        {offer.image && <img src={`${apiUrl}${offer.image}`} alt={`${offer.productTitle} — ${offer.artistName}`} />}
+        {offer.image && <img src={publicImage(offer.image)} alt={`${offer.productTitle} — ${offer.artistName}`} />}
         <p className="eyebrow">{de ? "Dein Print" : "Tu print"}</p><h2>{offer.productTitle}</h2><p className="framing-offer-artist">{offer.artistName} · {offer.formatLabel}</p>
         <div className="framing-offer-description"><span>{de ? "Individuelle Rahmung" : "Enmarcación personalizada"}</span><p>{offer.description}</p></div>
         <div className="framing-offer-price"><span>{de ? "Angebotspreis" : "Precio de la oferta"}</span><strong>{money(offer.priceCents)}</strong></div><p className="framing-offer-vat">{de ? "inkl. MwSt." : "IVA incluido"}</p>
