@@ -115,3 +115,9 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_email_sent_at TIMESTAMPTZ;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_email_resend_id TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_email_error TEXT;
 UPDATE orders SET subtotal_cents=total_cents WHERE subtotal_cents=0;
+
+
+-- CGM ORDER NOTIFICATION V1
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_email_sent_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_email_resend_id TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_email_error TEXT;
