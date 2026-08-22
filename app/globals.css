@@ -225,3 +225,37 @@
     box-sizing:border-box;
   }
 }
+
+/* CGM SHOP FILTERS V1 */
+.catalog-controls button.active,
+.catalog-subfilters button.active{
+  background:var(--ink);
+  color:var(--paper);
+}
+
+.catalog-subfilters{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  padding-top:18px;
+  padding-bottom:10px;
+}
+
+.catalog-subfilters button{
+  border:1px solid #162d2945;
+  background:transparent;
+  color:var(--ink);
+  padding:10px 14px;
+  cursor:pointer;
+}
+
+@media(max-width:800px){
+  .catalog-subfilters{
+    overflow:visible;
+  }
+
+  .catalog-subfilters button{
+    flex:0 1 auto;
+    max-width:100%;
+  }
+}
