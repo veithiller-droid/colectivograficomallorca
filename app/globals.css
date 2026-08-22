@@ -310,3 +310,8 @@
 .vat-note{
   margin:4px 0 10px;
 }
+
+/* CGM VAT NOTE SPACING V3 */
+.vat-note{
+  margin:4px 0 16px;
+}
