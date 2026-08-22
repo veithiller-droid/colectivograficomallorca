@@ -196,3 +196,32 @@
     box-sizing:border-box;
   }
 }
+
+
+/* CGM MOBILE FORMAT FIX V1 */
+@media(max-width:800px){
+
+  .format-picker{
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+  }
+
+  .format-picker div{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    width:100%;
+  }
+
+  .format-picker button{
+    min-width:0;
+    width:100%;
+    height:auto;
+    min-height:48px;
+    padding:10px 8px;
+    white-space:normal;
+    text-align:center;
+    box-sizing:border-box;
+  }
+}
