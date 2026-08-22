@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type TouchEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Product, PrintFormat } from "../../data/products";
 import { fetchProducts, formatPrices } from "../../data/products";
@@ -42,6 +42,10 @@ function ProductViewContent({ product, previousProduct, nextProduct }: Omit<Prod
   const { language, t } = useLanguage();
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customSending, setCustomSending] = useState(false);
+  const [customSent, setCustomSent] = useState(false);
+  const [customError, setCustomError] = useState("");
 
   useEffect(() => {
     const artist = window.sessionStorage.getItem(artistTransitionKey);
@@ -86,6 +90,47 @@ function ProductViewContent({ product, previousProduct, nextProduct }: Omit<Prod
     setFormat(nextFormat);
     if (nextFormat === "A6") setFrame("unframed");
   };
+  const submitCustomFrame = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!format) return;
+
+    setCustomError("");
+    setCustomSending(true);
+
+    try {
+      const form = event.currentTarget;
+      const payload = new FormData(form);
+      const files = payload.getAll("images").filter(value => value instanceof File && value.size > 0);
+
+      if (files.length > 3) {
+        setCustomError(language === "es" ? "Puedes subir un máximo de 3 imágenes." : "Du kannst maximal 3 Bilder hochladen.");
+        setCustomSending(false);
+        return;
+      }
+
+      payload.set("productId", product.id);
+      payload.set("format", format);
+      payload.set("locale", language);
+
+      const response = await fetch("/api/framing-request", {
+        method: "POST",
+        body: payload,
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || (language === "es" ? "No se pudo enviar la solicitud." : "Die Anfrage konnte nicht gesendet werden."));
+      }
+
+      form.reset();
+      setCustomSent(true);
+    } catch (error) {
+      setCustomError(error instanceof Error ? error.message : (language === "es" ? "No se pudo enviar la solicitud." : "Die Anfrage konnte nicht gesendet werden."));
+    } finally {
+      setCustomSending(false);
+    }
+  };
+
   const addToCart = () => {
     if (!format || totalPrice === null || frame === "custom") return;
     const frameId: CartFrame = frame === "aluminium" ? `aluminium-${frameColor}` : frame === "standard" ? "standard-black" : "unframed";
@@ -115,7 +160,113 @@ function ProductViewContent({ product, previousProduct, nextProduct }: Omit<Prod
       {format === "A6" && <p className="frame-availability">{t.product.a6Unframed}</p>}
       {frame === "aluminium" && <fieldset className="option-picker color-picker"><legend>{t.product.frameColor}</legend><div className="color-options">{(["silver", "black", "gold"] as FrameColor[]).map(color => <button type="button" className={frameColor === color ? "active" : ""} onClick={() => setFrameColor(color)} key={color}><span className={`color-dot ${color}`} />{t.product.colors[color]}</button>)}</div><p>{t.product.realGlass}</p></fieldset>}
       {frame === "custom" && <p className="custom-frame-note">{t.product.customInfo}</p>}
-      <button className="add-to-cart" type="button" disabled={!format} onClick={addToCart}>{frame === "custom" ? t.product.request : added ? (t.product.cart === "In den Warenkorb" ? "Hinzugefügt" : "Añadido") : t.product.cart}</button>
+      <button className="add-to-cart" type="button" disabled={!format} onClick={() => frame === "custom" ? (setCustomOpen(true), setCustomSent(false), setCustomError("")) : addToCart()}>{frame === "custom" ? t.product.request : added ? (t.product.cart === "In den Warenkorb" ? "Hinzugefügt" : "Añadido") : t.product.cart}</button>
+
+      {frame === "custom" && customOpen && (
+        <form className="custom-frame-form" onSubmit={submitCustomFrame} onTouchStart={event => event.stopPropagation()} onTouchEnd={event => event.stopPropagation()}>
+          {customSent ? (
+            <div className="custom-frame-success">
+              <span>OK</span>
+              <h2>{language === "es" ? "Solicitud recibida." : "Anfrage erhalten."}</h2>
+              <p>{language === "es"
+                ? "Te hemos enviado una copia por email. Enviaremos tu solicitud a Art i Vases en Artà. Ellos revisarán tus preferencias y se pondrán en contacto contigo directamente."
+                : "Wir haben dir eine Kopie per E-Mail geschickt. Deine Anfrage leiten wir an Art i Vases in Artà weiter. Dort werden deine Wünsche geprüft und Art i Vases meldet sich anschließend direkt bei dir."}</p>
+              <button type="button" className="custom-frame-close" onClick={() => setCustomOpen(false)}>{language === "es" ? "Cerrar" : "Schließen"}</button>
+            </div>
+          ) : (
+            <>
+              <div className="custom-frame-head">
+                <div>
+                  <p className="eyebrow">CUSTOMIZED FRAME</p>
+                  <h2>{language === "es" ? "Solicitar enmarcación personalizada" : "Individuelle Rahmung anfragen"}</h2>
+                </div>
+                <button type="button" className="custom-frame-x" onClick={() => setCustomOpen(false)} aria-label={language === "es" ? "Cerrar" : "Schließen"}>×</button>
+              </div>
+
+              <p className="custom-frame-intro">{language === "es"
+                ? "Cuéntanos brevemente cómo imaginas el marco. Guardaremos la solicitud junto con el motivo y el formato seleccionados."
+                : "Sag uns kurz, wie du dir die Rahmung vorstellst. Die Anfrage wird zusammen mit dem ausgewählten Motiv und Format gespeichert."}</p>
+
+              <div className="custom-frame-product">
+                <span>{language === "es" ? "Tu print" : "Dein Print"}</span>
+                <strong>{product.title}</strong>
+                <small>{product.artist} · {formatLabel(format, language)}</small>
+              </div>
+
+              <div className="custom-frame-fields">
+                <label>{language === "es" ? "Nombre" : "Name"}<input name="name" required autoComplete="name" /></label>
+                <label>E-Mail<input name="email" required type="email" autoComplete="email" /></label>
+                <label>{language === "es" ? "Teléfono · opcional" : "Telefon · optional"}<input name="phone" type="tel" autoComplete="tel" /></label>
+
+                <label>{language === "es" ? "Material del marco" : "Material des Rahmens"}
+                  <select name="material" defaultValue="unsure">
+                    <option value="wood">{language === "es" ? "Madera" : "Holz"}</option>
+                    <option value="aluminium">{language === "es" ? "Aluminio" : "Aluminium"}</option>
+                    <option value="unsure">{language === "es" ? "Aún no lo sé" : "Noch unsicher"}</option>
+                  </select>
+                </label>
+
+                <label>{language === "es" ? "Color / acabado" : "Farbe / Oberfläche"}
+                  <select name="frameColor" defaultValue="unsure">
+                    <option value="black">{language === "es" ? "Negro" : "Schwarz"}</option>
+                    <option value="white">{language === "es" ? "Blanco" : "Weiß"}</option>
+                    <option value="natural">{language === "es" ? "Madera natural" : "Naturholz"}</option>
+                    <option value="silver">{language === "es" ? "Plata" : "Silber"}</option>
+                    <option value="gold">{language === "es" ? "Oro" : "Gold"}</option>
+                    <option value="other">{language === "es" ? "Otro" : "Andere"}</option>
+                    <option value="unsure">{language === "es" ? "Aún no lo sé" : "Noch unsicher"}</option>
+                  </select>
+                </label>
+
+                <label>Passepartout
+                  <select name="passepartout" defaultValue="unsure">
+                    <option value="no">{language === "es" ? "Sin paspartú" : "Ohne Passepartout"}</option>
+                    <option value="yes">{language === "es" ? "Con paspartú" : "Mit Passepartout"}</option>
+                    <option value="unsure">{language === "es" ? "Aún no lo sé" : "Noch unsicher"}</option>
+                  </select>
+                </label>
+
+                <label>{language === "es" ? "Anchura del paspartú" : "Passepartout-Breite"}
+                  <select name="passepartoutWidth" defaultValue="unsure">
+                    <option value="narrow">{language === "es" ? "Estrecho · aprox. 3–4 cm" : "Schmal · ca. 3–4 cm"}</option>
+                    <option value="medium">{language === "es" ? "Medio · aprox. 5–7 cm" : "Mittel · ca. 5–7 cm"}</option>
+                    <option value="wide">{language === "es" ? "Ancho · aprox. 8–12 cm" : "Breit · ca. 8–12 cm"}</option>
+                    <option value="other">{language === "es" ? "Otra anchura" : "Andere Breite"}</option>
+                    <option value="unsure">{language === "es" ? "Aún no lo sé" : "Noch unsicher"}</option>
+                  </select>
+                </label>
+
+                <label>{language === "es" ? "Cristal" : "Glas"}
+                  <select name="glassType" defaultValue="unsure">
+                    <option value="normal">{language === "es" ? "Cristal normal" : "Normalglas"}</option>
+                    <option value="anti_reflective">{language === "es" ? "Cristal antirreflejos" : "Entspiegeltes Glas"}</option>
+                    <option value="unsure">{language === "es" ? "Aún no lo sé" : "Noch unsicher"}</option>
+                  </select>
+                </label>
+
+                <label className="custom-frame-full">{language === "es" ? "Otros deseos" : "Sonstige Wünsche"}
+                  <textarea name="message" rows={4} placeholder={language === "es" ? "Color, estilo, una idea concreta…" : "Farbe, Stil, eine bestimmte Vorstellung…"} />
+                </label>
+
+                <label className="custom-frame-upload custom-frame-full">{language === "es" ? "Imágenes de referencia · opcional" : "Referenzbilder · optional"}
+                  <input name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+                  <small>{language === "es" ? "Hasta 3 imágenes · pared, habitación, marco o inspiración · JPG, PNG o WebP" : "Bis zu 3 Bilder · Wand, Raum, Rahmen oder Inspiration · JPG, PNG oder WebP"}</small>
+                </label>
+              </div>
+
+              {customError && <p className="custom-frame-error">{customError}</p>}
+
+              <button className="custom-frame-submit" type="submit" disabled={customSending}>
+                {customSending ? (language === "es" ? "Enviando…" : "Wird gesendet …") : (language === "es" ? "Enviar solicitud" : "Rahmungsanfrage senden")}
+              </button>
+
+              <p className="custom-frame-small">{language === "es"
+                ? "La solicitud no implica ningún compromiso. La enviaremos a Art i Vases en Artà. Ellos revisarán la opción solicitada y se pondrán en contacto contigo directamente con las posibilidades y el precio."
+                : "Die Anfrage ist unverbindlich. Wir leiten sie an Art i Vases in Artà weiter. Dort wird die gewünschte Ausführung geprüft und Art i Vases meldet sich anschließend direkt bei dir mit den Möglichkeiten und dem Preis."}</p>
+            </>
+          )}
+        </form>
+      )}
       <div className="technical-info"><h2>{t.product.technical}</h2><dl><div><dt>{t.product.product}</dt><dd>Fine Art Print</dd></div><div><dt>{t.product.artist}</dt><dd>{product.artist}</dd></div><div><dt>{t.product.format}</dt><dd>{format ? formatLabel(format, language) : "–"}</dd></div><div><dt>{t.product.frame}</dt><dd>{frame === "aluminium" ? `${t.product.aluminiumFrame} · ${t.product.colors[frameColor]} · ${t.product.realGlass}` : t.product.frameValues[frame]}</dd></div><div><dt>{t.product.origin}</dt><dd>Made, selected and printed in Mallorca</dd></div><div><dt>{t.product.shipping}</dt><dd>{t.product.shippingValue}</dd></div></dl></div>
     </div>
     </section>

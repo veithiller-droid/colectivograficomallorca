@@ -276,3 +276,32 @@
   opacity:.55;
   text-align:right;
 }
+
+
+/* CGM CUSTOM FRAME FORM V1 */
+.custom-frame-form{margin:14px 0 28px;border:1px solid #162d2940;background:#fffaf3;padding:24px}
+.custom-frame-head{display:flex;justify-content:space-between;gap:20px;align-items:start;border-bottom:1px solid #162d2928;padding-bottom:18px;margin-bottom:18px}
+.custom-frame-head h2{font:30px/1.02 Georgia,serif;letter-spacing:-.025em;margin:8px 0 0}
+.custom-frame-x{border:0;background:transparent;color:var(--ink);font-size:28px;line-height:1;padding:0;cursor:pointer}
+.custom-frame-intro{font:15px/1.55 Georgia,serif;margin:0 0 18px}
+.custom-frame-product{background:var(--sand);padding:14px 16px;margin-bottom:18px}
+.custom-frame-product span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;opacity:.65}
+.custom-frame-product strong,.custom-frame-product small{display:block}
+.custom-frame-product small{font-size:10px;margin-top:4px;opacity:.65}
+.custom-frame-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.custom-frame-fields label{display:grid;gap:6px;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.custom-frame-fields input,.custom-frame-fields select,.custom-frame-fields textarea{width:100%;box-sizing:border-box;border:1px solid #162d2940;background:var(--paper);color:var(--ink);padding:12px;font:13px Arial,sans-serif}
+.custom-frame-fields textarea{resize:vertical}
+.custom-frame-full{grid-column:1/-1}
+.custom-frame-upload input{padding:10px}
+.custom-frame-upload small{font-size:9px;line-height:1.4;text-transform:none;letter-spacing:0;opacity:.6}
+.custom-frame-submit{width:100%;border:0;background:var(--coral);color:var(--paper);padding:16px;font-weight:700;cursor:pointer;margin-top:18px}
+.custom-frame-submit:disabled{opacity:.5;cursor:wait}
+.custom-frame-small{font-size:10px;line-height:1.5;opacity:.65;margin:12px 0 0}
+.custom-frame-error{color:var(--coral);font-size:11px;margin:14px 0 0}
+.custom-frame-success{padding:10px 0}
+.custom-frame-success>span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#dce9df;margin-bottom:18px;font-size:9px;font-weight:700}
+.custom-frame-success h2{font:32px Georgia,serif;margin:0 0 14px}
+.custom-frame-success p{font:15px/1.6 Georgia,serif}
+.custom-frame-close{border:1px solid #162d2940;background:transparent;color:var(--ink);padding:11px 15px;cursor:pointer}
+@media(max-width:650px){.custom-frame-form{padding:18px}.custom-frame-fields{grid-template-columns:1fr}.custom-frame-full{grid-column:auto}.custom-frame-head h2{font-size:26px}}

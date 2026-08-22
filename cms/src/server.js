@@ -63,6 +63,29 @@ app.post("/api/newsletter/campaigns/:id/send", requireLogin, async (request,resp
 });
 
 
+app.get("/api/framing-requests", requireLogin, async (_request,response) => {
+  const result = await backend("/api/cms/framing-requests");
+  response.status(result.status).send(await result.text());
+});
+
+app.patch("/api/framing-requests/:id", requireLogin, async (request,response) => {
+  const result = await backend(`/api/cms/framing-requests/${encodeURIComponent(request.params.id)}`, {
+    method:"PATCH",
+    body:JSON.stringify(request.body)
+  });
+  response.status(result.status).send(await result.text());
+});
+
+app.get("/api/framing-requests/:requestId/images/:imageId", requireLogin, async (request,response) => {
+  const result = await fetch(`${backendUrl}/api/cms/framing-requests/${encodeURIComponent(request.params.requestId)}/images/${encodeURIComponent(request.params.imageId)}`, {
+    headers:{authorization:`Bearer ${process.env.CMS_API_TOKEN}`}
+  });
+  if (!result.ok) return response.sendStatus(result.status);
+  response.set("Content-Type", result.headers.get("content-type") || "image/webp");
+  response.set("Cache-Control","private, max-age=3600");
+  response.send(Buffer.from(await result.arrayBuffer()));
+});
+
 app.get("/api/orders", requireLogin, async (request, response) => {
   const status = request.query.status ? `?status=${encodeURIComponent(String(request.query.status))}` : "";
   const result = await backend(`/api/cms/orders${status}`);
@@ -123,6 +146,8 @@ app.get("/media/:id", requireLogin, async (request, response) => {
 app.get("/session", (request, response) => response.json({ authenticated: authenticated(request) }));
 app.get("/", (request, response) => response.sendFile(path.join(root, authenticated(request) ? "index.html" : "login.html")));
 app.get("/index.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "index.html")) : response.redirect("/"));
+app.get("/framing", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "framing.html")) : response.redirect("/"));
+app.get("/framing.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "framing.html")) : response.redirect("/"));
 app.get("/products", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "products.html")) : response.redirect("/"));
 app.get("/products.html", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "products.html")) : response.redirect("/"));
 app.get("/homepage", (request, response) => authenticated(request) ? response.sendFile(path.join(root, "homepage.html")) : response.redirect("/"));

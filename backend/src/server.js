@@ -305,6 +305,63 @@ Sprache: ${String(order.locale || "de").toUpperCase()}`;
   return { subject, text, html };
 }
 
+
+// CGM FRAMING REQUESTS V1
+const framingUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 3 },
+  fileFilter: (_request, file, callback) =>
+    callback(null, ["image/jpeg","image/png","image/webp"].includes(file.mimetype))
+});
+
+const framingStatuses = ["new","processing","forwarded","completed"];
+
+const framingLabels = {
+  de: {
+    material: { wood:"Holz", aluminium:"Aluminium", unsure:"Noch unsicher" },
+    color: { black:"Schwarz", white:"Weiß", natural:"Naturholz", silver:"Silber", gold:"Gold", other:"Andere", unsure:"Noch unsicher" },
+    passepartout: { no:"Ohne Passepartout", yes:"Mit Passepartout", unsure:"Noch unsicher" },
+    width: { narrow:"Schmal · ca. 3–4 cm", medium:"Mittel · ca. 5–7 cm", wide:"Breit · ca. 8–12 cm", other:"Andere Breite", unsure:"Noch unsicher" },
+    glass: { normal:"Normalglas", anti_reflective:"Entspiegeltes Glas", unsure:"Noch unsicher" }
+  },
+  es: {
+    material: { wood:"Madera", aluminium:"Aluminio", unsure:"Aún no lo sé" },
+    color: { black:"Negro", white:"Blanco", natural:"Madera natural", silver:"Plata", gold:"Oro", other:"Otro", unsure:"Aún no lo sé" },
+    passepartout: { no:"Sin paspartú", yes:"Con paspartú", unsure:"Aún no lo sé" },
+    width: { narrow:"Estrecho · aprox. 3–4 cm", medium:"Medio · aprox. 5–7 cm", wide:"Ancho · aprox. 8–12 cm", other:"Otra anchura", unsure:"Aún no lo sé" },
+    glass: { normal:"Cristal normal", anti_reflective:"Cristal antirreflejos", unsure:"Aún no lo sé" }
+  }
+};
+
+function framingRequestConfirmationMail(item) {
+  const es = item.locale === "es";
+  const orderNo = String(item.id || "").slice(0,8).toUpperCase();
+  const subject = es ? `Hemos recibido tu solicitud de enmarcación · ${orderNo}` : `Wir haben deine Rahmungsanfrage erhalten · ${orderNo}`;
+
+  const heading = es ? "Gracias por tu solicitud de enmarcación." : "Vielen Dank für deine Rahmungsanfrage.";
+  const intro = es
+    ? `Hemos recibido tus preferencias para ${htmlEscape(item.product_title)} en formato ${htmlEscape(item.format_label)}.`
+    : `Wir haben deine Wünsche für ${htmlEscape(item.product_title)} im Format ${htmlEscape(item.format_label)} erhalten.`;
+  const artIvases = es
+    ? "Enviaremos tu solicitud a Art i Vases en Artà, nuestro taller de enmarcación de confianza. El equipo de Art i Vases revisará la opción solicitada y se pondrá en contacto contigo directamente con las posibilidades y el precio."
+    : "Wir leiten deine Anfrage an Art i Vases in Artà, unsere Rahmerei des Vertrauens, weiter. Das Team von Art i Vases prüft die gewünschte Ausführung und meldet sich anschließend direkt bei dir mit den Möglichkeiten und dem Preis.";
+  const nonBinding = es ? "La solicitud no implica ningún compromiso." : "Deine Anfrage ist selbstverständlich unverbindlich.";
+
+  const rows = [
+    [es ? "Material" : "Material", item.material_label],
+    [es ? "Color / acabado" : "Farbe / Oberfläche", item.frame_color_label],
+    ["Passepartout", item.passepartout_label],
+    [es ? "Anchura del paspartú" : "Passepartout-Breite", item.passepartout_width_label],
+    [es ? "Cristal" : "Glas", item.glass_type_label]
+  ].map(([label,value]) => `<tr><td style="padding:9px 0;border-bottom:1px solid #162d2925;font:11px Arial,sans-serif;opacity:.65">${htmlEscape(label)}</td><td style="padding:9px 0;border-bottom:1px solid #162d2925;text-align:right;font:13px Arial,sans-serif">${htmlEscape(value)}</td></tr>`).join("");
+
+  return {
+    subject,
+    html:`<!doctype html><html><body style="margin:0;background:#f6efe5;color:#162d29"><div style="max-width:680px;margin:auto;padding:55px 28px"><div style="font:900 13px/.85 Arial,sans-serif">COLECTIVO<br>GRÁFICO<br>MALLORCA</div><h1 style="font:400 48px/.95 Georgia,serif;letter-spacing:-.04em;margin:55px 0 28px">${heading}</h1><p style="font:17px/1.65 Georgia,serif;margin:0 0 18px">${intro}</p><p style="font:17px/1.65 Georgia,serif;margin:0 0 18px">${artIvases}</p><p style="font:17px/1.65 Georgia,serif;margin:0 0 32px">${nonBinding}</p><div style="border-top:1px solid #162d2940;border-bottom:1px solid #162d2940;padding:18px 0;margin-bottom:22px"><span style="font:10px Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase">${es?"Solicitud":"Anfrage"}</span><strong style="float:right;font:18px Georgia,serif">${orderNo}</strong></div><table style="width:100%;border-collapse:collapse">${rows}</table>${item.message ? `<p style="font:14px/1.6 Arial,sans-serif;margin:24px 0"><strong>${es?"Tus notas":"Deine Nachricht"}</strong><br>${htmlEscape(item.message).replace(/\n/g,"<br>")}</p>` : ""}<div style="border-top:1px solid #162d2940;margin-top:38px;padding-top:20px;font:11px/1.6 Arial,sans-serif">Colectivo Gráfico Mallorca · Artà · Mallorca<br>info@colectivograficomallorca.com</div></div></body></html>`,
+    text:`${heading}\n\n${intro}\n\n${artIvases}\n\n${nonBinding}\n\n${es?"Solicitud":"Anfrage"}: ${orderNo}\n${es?"Material":"Material"}: ${item.material_label}\n${es?"Color / acabado":"Farbe / Oberfläche"}: ${item.frame_color_label}\nPassepartout: ${item.passepartout_label}\n${es?"Anchura del paspartú":"Passepartout-Breite"}: ${item.passepartout_width_label}\n${es?"Cristal":"Glas"}: ${item.glass_type_label}${item.message ? `\n\n${es?"Tus notas":"Deine Nachricht"}:\n${item.message}` : ""}`
+  };
+}
+
 function requireCms(request, response, next) {
   const expected = process.env.CMS_API_TOKEN;
   const supplied = request.headers.authorization?.replace(/^Bearer\s+/i, "");
@@ -694,6 +751,170 @@ app.post("/api/cms/newsletter/campaigns/:id/send", requireCms, async (request,re
     await query("UPDATE newsletter_campaigns SET status=$1,recipient_count=$2,failed_count=$3,sent_at=CASE WHEN $1='sent' THEN NOW() ELSE sent_at END,updated_at=NOW() WHERE id=$4",[status,sent,failed,campaign.id]);
     response.json({sent,failed,status});
   } catch(error){next(error);}
+});
+
+
+
+app.post("/api/public/framing-requests", framingUpload.array("images", 3), async (request, response, next) => {
+  const client = await pool.connect();
+  try {
+    const locale = request.body?.locale === "es" ? "es" : "de";
+    const labels = framingLabels[locale];
+    const productId = String(request.body?.productId || "");
+    const format = String(request.body?.format || "");
+    const customerName = String(request.body?.name || "").trim().slice(0,180);
+    const customerEmail = String(request.body?.email || "").trim().toLowerCase().slice(0,320);
+    const customerPhone = String(request.body?.phone || "").trim().slice(0,100) || null;
+    const material = String(request.body?.material || "unsure");
+    const frameColor = String(request.body?.frameColor || "unsure");
+    const passepartout = String(request.body?.passepartout || "unsure");
+    const passepartoutWidth = String(request.body?.passepartoutWidth || "unsure");
+    const glassType = String(request.body?.glassType || "unsure");
+    const message = String(request.body?.message || "").trim().slice(0,5000) || null;
+
+    if (!productId || !format || !customerName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      return response.status(400).json({ error: locale === "es" ? "Completa nombre, email y formato." : "Bitte Name, E-Mail und Format vollständig angeben." });
+    }
+    if (!labels.material[material] || !labels.color[frameColor] || !labels.passepartout[passepartout] || !labels.width[passepartoutWidth] || !labels.glass[glassType]) {
+      return response.status(400).json({ error: "Invalid framing option" });
+    }
+
+    const product = (await client.query(
+      `SELECT p.id,p.slug,p.title,a.name AS artist_name
+       FROM products p JOIN artists a ON a.id=p.artist_id
+       WHERE p.id=$1 AND p.active=TRUE`,
+      [productId]
+    )).rows[0];
+
+    if (!product) return response.status(404).json({ error: "Product not found" });
+
+    const available = await client.query(
+      "SELECT 1 FROM product_formats WHERE product_id=$1 AND format=$2 AND available=TRUE",
+      [productId, format]
+    );
+    if (!available.rowCount || format === "A6") return response.status(400).json({ error: "Format is not available for custom framing" });
+
+    const requestId = crypto.randomUUID();
+    const formatLabel = ({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[format] || format;
+
+    await client.query("BEGIN");
+    await client.query(
+      `INSERT INTO framing_requests(
+        id,product_id,product_slug,product_title,artist_name,format,locale,
+        customer_name,customer_email,customer_phone,material,frame_color,
+        passepartout,passepartout_width,glass_type,message,status
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'new')`,
+      [requestId,product.id,product.slug,product.title,product.artist_name,format,locale,
+       customerName,customerEmail,customerPhone,material,frameColor,passepartout,passepartoutWidth,glassType,message]
+    );
+
+    const files = Array.isArray(request.files) ? request.files : [];
+    for (let index=0; index<files.length; index++) {
+      const file = files[index];
+      const imageData = await sharp(file.buffer).rotate().resize({ width:1600,height:1600,fit:"inside",withoutEnlargement:true }).webp({quality:82,effort:5}).toBuffer();
+      await client.query(
+        `INSERT INTO framing_request_images(request_id,sort_order,image_data,mime_type,original_name)
+         VALUES($1,$2,$3,'image/webp',$4)`,
+        [requestId,index,imageData,file.originalname]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    const mailData = {
+      id: requestId,
+      locale,
+      product_title: product.title,
+      format_label: formatLabel,
+      material_label: labels.material[material],
+      frame_color_label: labels.color[frameColor],
+      passepartout_label: labels.passepartout[passepartout],
+      passepartout_width_label: labels.width[passepartoutWidth],
+      glass_type_label: labels.glass[glassType],
+      message
+    };
+
+    try {
+      const mail = framingRequestConfirmationMail(mailData);
+      const sentMail = await resend("/emails", {
+        from: newsletterFrom,
+        to: [customerEmail],
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: [{name:"category",value:"framing_request"}]
+      }, `framing-request/${requestId}`);
+
+      await query(
+        `UPDATE framing_requests
+         SET confirmation_email_sent_at=NOW(),confirmation_email_resend_id=$2,confirmation_email_error=NULL,updated_at=NOW()
+         WHERE id=$1`,
+        [requestId,sentMail?.id || null]
+      );
+    } catch (mailError) {
+      console.error("Framing request confirmation failed", {requestId,error:mailError.message});
+      await query(
+        "UPDATE framing_requests SET confirmation_email_error=$2,updated_at=NOW() WHERE id=$1",
+        [requestId,String(mailError.message || "Unknown email error").slice(0,2000)]
+      );
+    }
+
+    response.status(201).json({ accepted:true, id:requestId });
+  } catch (error) {
+    try { await client.query("ROLLBACK"); } catch {}
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/cms/framing-requests", requireCms, async (_request,response,next) => {
+  try {
+    const result = await query(
+      `SELECT r.*,
+        COALESCE(json_agg(json_build_object('id',i.id,'originalName',i.original_name,'uploadedAt',i.uploaded_at) ORDER BY i.sort_order)
+        FILTER (WHERE i.id IS NOT NULL),'[]') AS images
+       FROM framing_requests r
+       LEFT JOIN framing_request_images i ON i.request_id=r.id
+       GROUP BY r.id
+       ORDER BY r.created_at DESC
+       LIMIT 500`
+    );
+    const requests = result.rows.map(row => ({
+      ...row,
+      format_label: ({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[row.format] || row.format,
+      material: framingLabels.de.material[row.material] || row.material,
+      frame_color: framingLabels.de.color[row.frame_color] || row.frame_color,
+      passepartout: framingLabels.de.passepartout[row.passepartout] || row.passepartout,
+      passepartout_width: framingLabels.de.width[row.passepartout_width] || row.passepartout_width,
+      glass_type: framingLabels.de.glass[row.glass_type] || row.glass_type
+    }));
+    response.json({requests});
+  } catch(error){ next(error); }
+});
+
+app.patch("/api/cms/framing-requests/:id", requireCms, async (request,response,next) => {
+  try {
+    const status = String(request.body?.status || "");
+    if (!framingStatuses.includes(status)) return response.status(400).json({error:"Invalid status"});
+    const result = await query(
+      "UPDATE framing_requests SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING *",
+      [status,request.params.id]
+    );
+    if (!result.rowCount) return response.status(404).json({error:"Request not found"});
+    response.json({request:result.rows[0]});
+  } catch(error){ next(error); }
+});
+
+app.get("/api/cms/framing-requests/:requestId/images/:imageId", requireCms, async (request,response,next) => {
+  try {
+    const result = await query(
+      "SELECT image_data,mime_type FROM framing_request_images WHERE id=$1 AND request_id=$2",
+      [request.params.imageId,request.params.requestId]
+    );
+    if (!result.rowCount) return response.status(404).end();
+    response.type(result.rows[0].mime_type || "image/webp").send(result.rows[0].image_data);
+  } catch(error){ next(error); }
 });
 
 

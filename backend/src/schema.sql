@@ -121,3 +121,43 @@ UPDATE orders SET subtotal_cents=total_cents WHERE subtotal_cents=0;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_email_sent_at TIMESTAMPTZ;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_email_resend_id TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_email_error TEXT;
+
+
+-- CGM FRAMING REQUESTS V1
+CREATE TABLE IF NOT EXISTS framing_requests (
+  id TEXT PRIMARY KEY,
+  product_id TEXT,
+  product_slug TEXT,
+  product_title TEXT NOT NULL,
+  artist_name TEXT NOT NULL,
+  format TEXT NOT NULL,
+  locale TEXT NOT NULL DEFAULT 'de',
+  customer_name TEXT NOT NULL,
+  customer_email TEXT NOT NULL,
+  customer_phone TEXT,
+  material TEXT NOT NULL,
+  frame_color TEXT NOT NULL,
+  passepartout TEXT NOT NULL,
+  passepartout_width TEXT NOT NULL,
+  glass_type TEXT NOT NULL,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','processing','forwarded','completed')),
+  confirmation_email_sent_at TIMESTAMPTZ,
+  confirmation_email_resend_id TEXT,
+  confirmation_email_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS framing_request_images (
+  id BIGSERIAL PRIMARY KEY,
+  request_id TEXT NOT NULL REFERENCES framing_requests(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  image_data BYTEA NOT NULL,
+  mime_type TEXT NOT NULL DEFAULT 'image/webp',
+  original_name TEXT,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS framing_requests_status_created_idx
+  ON framing_requests(status, created_at DESC);

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rahmungsanfragen · Colectivo CMS</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/products.css">
+  <link rel="stylesheet" href="/framing.css">
+</head>
+<body>
+<header>
+  <div><p class="eyebrow">COLECTIVO GRÁFICO MALLORCA</p><strong>CMS</strong></div>
+  <nav>
+    <a href="/">Bestellungen</a>
+    <a class="nav-active" href="/framing">Rahmungsanfragen</a>
+    <a href="/products">Produkte</a>
+    <a href="/homepage">Titelseite</a>
+    <a href="/newsletter">Newsletter</a>
+  </nav>
+  <form method="post" action="/logout"><button class="quiet">Abmelden</button></form>
+</header>
+
+<main>
+  <section class="hero product-hero">
+    <div>
+      <p class="eyebrow">CUSTOMIZED FRAMES</p>
+      <h1>Rahmungsanfragen</h1>
+    </div>
+    <div class="summary" id="framing-summary"></div>
+  </section>
+
+  <section class="framing-filters" id="framing-filters"></section>
+  <section class="framing-list" id="framing-list">
+    <p>Anfragen werden geladen …</p>
+  </section>
+</main>
+
+<script src="/framing.js" defer></script>
+</body>
+</html>

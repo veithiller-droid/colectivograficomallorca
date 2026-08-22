@@ -1,0 +1,24 @@
+.framing-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+.framing-filters button{border:1px solid #162d2940;background:transparent;color:var(--ink);padding:10px 14px}
+.framing-filters button.active{background:var(--ink);color:var(--paper)}
+.framing-list{display:grid;gap:18px;padding-bottom:80px}
+.framing-card{border:1px solid #162d2928;background:#fffaf3;padding:24px}
+.framing-top{display:flex;justify-content:space-between;gap:20px;border-bottom:1px solid #162d2928;padding-bottom:16px;margin-bottom:20px}
+.framing-top strong{font:28px Georgia,serif}
+.framing-top small,.framing-meta small{display:block;font-size:10px;opacity:.6;margin-top:5px}
+.framing-grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:28px}
+.framing-grid h2{font:28px Georgia,serif;margin:0 0 8px}
+.framing-grid h3{font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin:0 0 12px}
+.framing-grid p,.framing-grid address{font-size:12px;line-height:1.55;font-style:normal}
+.framing-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:#162d2920}
+.framing-details>div{background:var(--paper);padding:12px}
+.framing-details span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;margin-bottom:5px}
+.framing-message{margin-top:16px;border-top:1px solid #162d2928;padding-top:14px}
+.framing-images{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.framing-images a{display:block;width:110px}
+.framing-images img{display:block;width:110px;height:110px;object-fit:cover;border:1px solid #162d2928}
+.framing-actions{display:flex;align-items:end;justify-content:space-between;gap:20px;border-top:1px solid #162d2928;padding-top:18px;margin-top:20px}
+.framing-actions label{display:grid;gap:6px;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.framing-actions select{padding:10px;border:1px solid #162d2940;background:var(--paper)}
+.mail-ok{color:#31574d}.mail-error{color:var(--coral)}.mail-pending{opacity:.55}
+@media(max-width:760px){.framing-grid{grid-template-columns:1fr}.framing-details{grid-template-columns:1fr}.framing-actions{align-items:stretch;flex-direction:column}}
