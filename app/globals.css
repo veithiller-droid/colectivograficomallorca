@@ -131,3 +131,68 @@
 
 /* CGM CHECKOUT SHIPPING V1 */
 .checkout-costs{border-top:1px solid #162d2940;padding:18px 0 4px;display:grid;gap:10px}.checkout-costs>div{display:flex;justify-content:space-between;gap:20px;font-size:13px}.checkout-costs strong{font-weight:700;text-align:right}.checkout-costs small{display:block;font-size:10px;line-height:1.45;opacity:.62;margin:3px 0 10px}
+
+
+/* CGM MOBILE CART + FORMAT FIX V1 */
+
+.mobile-cart-bubble{
+  display:none;
+}
+
+/* verhindert, dass Formatoptionen den Container verbreitern */
+.option-grid,
+.option-picker,
+.option-picker button{
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+
+@media(max-width:800px){
+
+  /* Format-Auswahl mobil untereinander */
+  .option-grid{
+    grid-template-columns:minmax(0,1fr);
+    width:100%;
+  }
+
+  .option-picker button{
+    width:100%;
+    overflow-wrap:anywhere;
+  }
+
+  /* schwebender Warenkorb */
+  .mobile-cart-bubble{
+    position:fixed;
+    right:max(16px, env(safe-area-inset-right));
+    bottom:max(18px, calc(env(safe-area-inset-bottom) + 12px));
+    z-index:200;
+    width:58px;
+    height:58px;
+    border-radius:50%;
+    background:var(--ink);
+    color:var(--paper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration:none;
+    box-shadow:0 8px 28px rgba(22,45,41,.25);
+    font-size:20px;
+  }
+
+  .mobile-cart-bubble b{
+    position:absolute;
+    top:-4px;
+    right:-4px;
+    min-width:21px;
+    height:21px;
+    padding:0 5px;
+    border-radius:999px;
+    background:var(--coral);
+    color:var(--paper);
+    display:grid;
+    place-items:center;
+    font:700 10px Arial,sans-serif;
+    box-sizing:border-box;
+  }
+}
