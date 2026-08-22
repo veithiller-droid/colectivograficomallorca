@@ -176,7 +176,7 @@ DO $$
 BEGIN
   ALTER TABLE framing_requests DROP CONSTRAINT IF EXISTS framing_requests_status_check;
   ALTER TABLE framing_requests ADD CONSTRAINT framing_requests_status_check
-    CHECK (status IN ('new','processing','forwarded','quote_ready','completed'));
+    CHECK (status IN ('new','processing','forwarded','quote_ready','offer_sent','paid','completed'));
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
