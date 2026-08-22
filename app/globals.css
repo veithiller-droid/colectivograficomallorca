@@ -305,3 +305,8 @@
 .custom-frame-success p{font:15px/1.6 Georgia,serif}
 .custom-frame-close{border:1px solid #162d2940;background:transparent;color:var(--ink);padding:11px 15px;cursor:pointer}
 @media(max-width:650px){.custom-frame-form{padding:18px}.custom-frame-fields{grid-template-columns:1fr}.custom-frame-full{grid-column:auto}.custom-frame-head h2{font-size:26px}}
+
+/* CGM VAT NOTE SPACING V2 */
+.vat-note{
+  margin:4px 0 10px;
+}
