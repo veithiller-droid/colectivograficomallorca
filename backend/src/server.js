@@ -335,67 +335,104 @@ const framingLabels = {
 
 
 function framingForwardMail(item, images) {
-  const subject = `Rahmungsanfrage ${String(item.id).slice(0,8).toUpperCase()} · ${item.product_title} · ${item.format}`;
+  const subject = `Solicitud de enmarcación ${String(item.id).slice(0,8).toUpperCase()} · ${item.product_title} · ${item.format}`;
   const imageNote = images.length
-    ? `${images.length} Referenzbild${images.length === 1 ? "" : "er"} im Anhang`
-    : "Keine Referenzbilder";
+    ? `${images.length} imagen${images.length === 1 ? "" : "es"} de referencia adjunta${images.length === 1 ? "" : "s"}`
+    : "Sin imágenes de referencia";
 
-  const text = `Hallo,
+  const formatLabel = ({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[item.format] || item.format;
 
-wir möchten euch folgende individuelle Rahmungsanfrage von Colectivo Gráfico Mallorca weiterleiten.
+  const material = framingLabels.es.material[item.material] || item.material;
+  const color = framingLabels.es.color[item.frame_color] || item.frame_color;
+  const passepartout = framingLabels.es.passepartout[item.passepartout] || item.passepartout;
+  const passepartoutWidth = framingLabels.es.width[item.passepartout_width] || item.passepartout_width;
+  const glass = framingLabels.es.glass[item.glass_type] || item.glass_type;
 
-ANFRAGE
+  const text = `Hola,
+
+os enviamos la siguiente solicitud de enmarcación personalizada de Colectivo Gráfico Mallorca.
+
+SOLICITUD
 ${String(item.id).slice(0,8).toUpperCase()}
 
 PRINT
 ${item.product_title}
 ${item.artist_name}
-${({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[item.format] || item.format}
+${formatLabel}
 
-KUNDE
+CLIENTE
 ${item.customer_name}
 ${item.customer_email}
-${item.customer_phone || "Kein Telefon angegeben"}
+${item.customer_phone || "Sin teléfono indicado"}
 
-GEWÜNSCHTE AUSFÜHRUNG
-Material: ${framingLabels.de.material[item.material] || item.material}
-Farbe / Oberfläche: ${framingLabels.de.color[item.frame_color] || item.frame_color}
-Passepartout: ${framingLabels.de.passepartout[item.passepartout] || item.passepartout}
-Passepartout-Breite: ${framingLabels.de.width[item.passepartout_width] || item.passepartout_width}
-Glas: ${framingLabels.de.glass[item.glass_type] || item.glass_type}
+ACABADO DESEADO
+Material: ${material}
+Color / acabado: ${color}
+Paspartú: ${passepartout}
+Anchura del paspartú: ${passepartoutWidth}
+Cristal: ${glass}
 
-WEITERE WÜNSCHE
-${item.message || "Keine weiteren Wünsche angegeben."}
+OTROS DESEOS
+${item.message || "No se han indicado otros deseos."}
 
 ${imageNote}
 
-Bitte prüft die gewünschte Ausführung und schickt uns Preis und mögliche Umsetzung zurück.
+Por favor, revisad la opción solicitada y enviadnos el precio y las posibilidades de realización.
 
-Vielen Dank
+Muchas gracias.
+
 Colectivo Gráfico Mallorca
 Artà · Mallorca`;
 
   const html = `<!doctype html><html><body style="margin:0;background:#f6efe5;color:#162d29"><div style="max-width:680px;margin:auto;padding:48px 28px">
   <div style="font:900 13px/.85 Arial,sans-serif">COLECTIVO<br>GRÁFICO<br>MALLORCA</div>
-  <h1 style="font:400 42px/.98 Georgia,serif;margin:45px 0 28px">Individuelle Rahmungsanfrage</h1>
-  <p style="font:15px/1.6 Arial,sans-serif">Hallo,<br><br>wir möchten euch folgende individuelle Rahmungsanfrage weiterleiten.</p>
+
+  <h1 style="font:400 42px/.98 Georgia,serif;margin:45px 0 28px">
+    Solicitud de enmarcación personalizada
+  </h1>
+
+  <p style="font:15px/1.6 Arial,sans-serif">
+    Hola,<br><br>
+    os enviamos la siguiente solicitud de enmarcación personalizada de Colectivo Gráfico Mallorca.
+  </p>
+
   <div style="border-top:1px solid #162d2940;border-bottom:1px solid #162d2940;padding:16px 0;margin:24px 0">
     <strong style="font:22px Georgia,serif">${htmlEscape(item.product_title)}</strong><br>
-    <span style="font:12px Arial,sans-serif">${htmlEscape(item.artist_name)} · ${htmlEscape(({A4:"20 × 30 cm",A3:"30 × 40 cm",A2:"40 × 60 cm"})[item.format] || item.format)}</span>
+    <span style="font:12px Arial,sans-serif">
+      ${htmlEscape(item.artist_name)} · ${htmlEscape(formatLabel)}
+    </span>
   </div>
+
   <table style="width:100%;border-collapse:collapse;font:13px Arial,sans-serif">
-    <tr><td style="padding:8px 0;opacity:.6">Kunde</td><td style="padding:8px 0;text-align:right">${htmlEscape(item.customer_name)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Cliente</td><td style="padding:8px 0;text-align:right">${htmlEscape(item.customer_name)}</td></tr>
     <tr><td style="padding:8px 0;opacity:.6">E-Mail</td><td style="padding:8px 0;text-align:right">${htmlEscape(item.customer_email)}</td></tr>
-    <tr><td style="padding:8px 0;opacity:.6">Telefon</td><td style="padding:8px 0;text-align:right">${htmlEscape(item.customer_phone || "–")}</td></tr>
-    <tr><td style="padding:8px 0;opacity:.6">Material</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.material[item.material] || item.material)}</td></tr>
-    <tr><td style="padding:8px 0;opacity:.6">Farbe / Oberfläche</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.color[item.frame_color] || item.frame_color)}</td></tr>
-    <tr><td style="padding:8px 0;opacity:.6">Passepartout</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.passepartout[item.passepartout] || item.passepartout)}</td></tr>
-    <tr><td style="padding:8px 0;opacity:.6">Passepartout-Breite</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.width[item.passepartout_width] || item.passepartout_width)}</td></tr>
-    <tr><td style="padding:8px 0;opacity:.6">Glas</td><td style="padding:8px 0;text-align:right">${htmlEscape(framingLabels.de.glass[item.glass_type] || item.glass_type)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Teléfono</td><td style="padding:8px 0;text-align:right">${htmlEscape(item.customer_phone || "–")}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Material</td><td style="padding:8px 0;text-align:right">${htmlEscape(material)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Color / acabado</td><td style="padding:8px 0;text-align:right">${htmlEscape(color)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Paspartú</td><td style="padding:8px 0;text-align:right">${htmlEscape(passepartout)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Anchura del paspartú</td><td style="padding:8px 0;text-align:right">${htmlEscape(passepartoutWidth)}</td></tr>
+    <tr><td style="padding:8px 0;opacity:.6">Cristal</td><td style="padding:8px 0;text-align:right">${htmlEscape(glass)}</td></tr>
   </table>
-  ${item.message ? `<div style="border-top:1px solid #162d2940;margin-top:22px;padding-top:18px"><strong style="font:11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em">Weitere Wünsche</strong><p style="font:14px/1.6 Arial,sans-serif">${htmlEscape(item.message).replace(/\n/g,"<br>")}</p></div>` : ""}
-  <p style="font:13px/1.6 Arial,sans-serif;margin-top:24px">${htmlEscape(imageNote)}.<br><br>Bitte prüft die gewünschte Ausführung und schickt uns Preis und mögliche Umsetzung zurück.</p>
-  <div style="border-top:1px solid #162d2940;margin-top:36px;padding-top:18px;font:11px/1.5 Arial,sans-serif">Colectivo Gráfico Mallorca · Artà · Mallorca</div>
+
+  ${item.message ? `
+    <div style="border-top:1px solid #162d2940;margin-top:22px;padding-top:18px">
+      <strong style="font:11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em">Otros deseos</strong>
+      <p style="font:14px/1.6 Arial,sans-serif">${htmlEscape(item.message).replace(/\n/g,"<br>")}</p>
+    </div>
+  ` : ""}
+
+  <p style="font:13px/1.6 Arial,sans-serif;margin-top:24px">
+    ${htmlEscape(imageNote)}.<br><br>
+    Por favor, revisad la opción solicitada y enviadnos el precio y las posibilidades de realización.
+  </p>
+
+  <p style="font:13px/1.6 Arial,sans-serif">
+    Muchas gracias.
+  </p>
+
+  <div style="border-top:1px solid #162d2940;margin-top:36px;padding-top:18px;font:11px/1.5 Arial,sans-serif">
+    Colectivo Gráfico Mallorca · Artà · Mallorca
+  </div>
   </div></body></html>`;
 
   return { subject, text, html };
